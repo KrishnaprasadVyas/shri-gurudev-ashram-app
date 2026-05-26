@@ -1,59 +1,57 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { useNavigation } from '@react-navigation/native';
-import AppButton from '../../components/AppButton';
-import AppCard from '../../components/AppCard';
-import AppHeader from '../../components/AppHeader';
-import ScreenContainer from '../../components/ScreenContainer';
-import { theme } from '../../constants/theme';
-import { MainTabParamList } from '../../navigators/MainTabNavigator';
+import React from 'react'
+import { SafeAreaView, ScrollView, View, Text } from 'react-native'
 
-type HomeNav = BottomTabNavigationProp<MainTabParamList, 'Home'>;
+import HeroSection from '../../components/HeroSection'
+import PaymentTrackerCard from '../../components/PaymentTrackerCard'
+import TripCard from '../../components/TripCard'
+import ActivityFeed from '../../components/ActivityFeed'
 
-export default function HomeScreen() {
-  const navigation = useNavigation<HomeNav>();
-
+const HomeScreen: React.FC = () => {
   return (
-    <ScreenContainer>
-      <View style={styles.content}>
-        <AppHeader title="Home" subtitle="Main tab landing area with placeholder quick actions." />
+    <SafeAreaView className="flex-1 bg-background">
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 48 }}
+        className="px-6 pt-4"
+        showsVerticalScrollIndicator={false}
+      >
+        <HeroSection />
 
-        <AppCard style={styles.card}>
-          <Text style={styles.cardTitle}>Welcome back</Text>
-          <Text style={styles.cardText}>
-            This boilerplate is structured for scalable feature work, while keeping the UI minimal.
-          </Text>
-        </AppCard>
-
-        <View style={styles.actions}>
-          <AppButton title="Open Travel" onPress={() => navigation.navigate('Travel')} />
-            <AppButton title="Settings" onPress={() => navigation.getParent()?.navigate('Settings' as never)} variant="secondary" />
+        <View className="mt-6">
+          <PaymentTrackerCard />
         </View>
-      </View>
-    </ScreenContainer>
-  );
+
+        <View className="mt-8">
+          <View className="flex-row justify-between items-center mb-3">
+            <Text className="text-2xl font-bold text-black">
+              My Trips
+            </Text>
+
+            <Text className="text-sm text-orange-500">
+              View All
+            </Text>
+          </View>
+
+          <TripCard
+            title="Varanasi Spiritual Walk"
+            dateRange="Nov 12 - Nov 18"
+            image="https://picsum.photos/800/600"
+            status="CONFIRMED"
+          />
+
+          <TripCard
+            title="Rishikesh Yoga Retreat"
+            dateRange="June 05 - June 15"
+            image="https://picsum.photos/801/600"
+            status="PAST TRIP"
+          />
+        </View>
+
+        <View className="mt-8">
+          <ActivityFeed />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  )
 }
 
-const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-    padding: theme.spacing.lg,
-  },
-  card: {
-    marginBottom: theme.spacing.lg,
-  },
-  cardTitle: {
-    color: theme.colors.text,
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: theme.typography.weights.bold,
-    marginBottom: theme.spacing.xs,
-  },
-  cardText: {
-    color: theme.colors.textMuted,
-    lineHeight: 20,
-  },
-  actions: {
-    gap: theme.spacing.md,
-  },
-});
+export default HomeScreen
