@@ -9,11 +9,15 @@ import BookingHistoryScreen from '../screens/travel/BookingHistoryScreen';
 import BookingDetailsScreen from '../screens/travel/BookingDetailsScreen';
 import BookingStatusScreen from '../screens/travel/BookingStatusScreen';
 import UploadDocumentsScreen from '../screens/travel/UploadDocumentsScreen';
+import TravelRegistrationScreen from '../screens/travel/TravelRegistrationScreen';
+import JourneyDashboardScreen from '../screens/travel/JourneyDashboardScreen';
 
 import { TravelPackage } from '../types/travel';
 
 export type TravelStackParamList = {
   TravelList: undefined;
+  TravelRegistration: undefined;
+  JourneyDashboard: undefined;
   BookingHistory: undefined;
   PackageDetails: { packageItem: TravelPackage };
   BookingForm: { packageItem: TravelPackage };
@@ -32,6 +36,8 @@ export default function TravelStackNavigator() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="TravelList" component={TravelScreen} options={{ title: 'Travel' }} />
+      <Stack.Screen name="TravelRegistration" component={TravelRegistrationScreen} options={{ title: 'Travel Registration' }} />
+    <Stack.Screen name="JourneyDashboard" component={JourneyDashboardScreen} options={{ title: 'Journey Dashboard' }} />
       <Stack.Screen name="BookingHistory" component={BookingHistoryScreen} options={{ title: 'Bookings' }} />
       <Stack.Screen name="PackageDetails" component={PackageDetailsScreen} options={{ title: 'Package' }} />
       <Stack.Screen name="BookingForm" component={BookingFormScreen} options={{ title: 'Booking' }} />

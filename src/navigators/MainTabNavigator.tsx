@@ -1,10 +1,10 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { theme } from '../constants/theme';
 import HomeScreen from '../screens/main/HomeScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import TravelStackNavigator from './TravelStackNavigator';
+import AppTabBar from '../components/AppTabBar';
 
 export type MainTabParamList = {
   Home: undefined;
@@ -21,17 +21,13 @@ export default function MainTabNavigator() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.tabInactive,
-        tabBarLabelStyle: {
-          fontSize: theme.typography.sizes.xs,
-          fontWeight: theme.typography.weights.semibold,
-        },
+        tabBarShowLabel: false,
       }}
+      tabBar={(props) => <AppTabBar {...props} />}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Travel" component={TravelStackNavigator} />
-      <Tab.Screen name="Notifications" component={NotificationsScreen} />
+      <Tab.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Alerts' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
