@@ -7,12 +7,6 @@
     "ignoreDeprecations": "6.0",
     "strict": true,
     "moduleResolution": "bundler",
-    "baseUrl": ".",
-    "paths": {
-      "@react-navigation/native": ["src/shims/react-navigation/native/index.tsx"],
-      "@react-navigation/native-stack": ["src/shims/react-navigation/native-stack/index.tsx"],
-      "@react-navigation/bottom-tabs": ["src/shims/react-navigation/bottom-tabs/index.tsx"]
-    },
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,

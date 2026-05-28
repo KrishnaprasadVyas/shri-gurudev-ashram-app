@@ -1,35 +1,35 @@
-import { BookingRecord, CollectorTask, NotificationItem, TravelPackage } from '../types/travel';
+import { BookingRecord, CollectorTask, NotificationItem } from '../types/travel';
 
-export const travelPackages: TravelPackage[] = [
-  {
-    id: '1',
-    title: 'Kedarnath Yatra',
-    price: '₹18,000',
-    duration: '6 Days / 5 Nights',
-    description: 'A high-altitude yatra with guided darshan, serene stays, and sacred mountain mornings.',
-  },
-  {
-    id: '2',
-    title: 'Haridwar Yatra',
-    price: '₹15,000',
-    duration: '4 Days / 3 Nights',
-    description: 'Temple aarti, Ganga serenity, and a warm spiritual stay designed for peaceful devotion.',
-  },
-  {
-    id: '3',
-    title: 'Dwarka Yatra',
-    price: '₹16,500',
-    duration: '5 Days / 4 Nights',
-    description: 'A sacred coastal journey with temple visits, premium comfort, and calm ocean-side retreating.',
-  },
-  {
-    id: '4',
-    title: 'Rishikesh Yatra',
-    price: '₹14,000',
-    duration: '4 Days / 3 Nights',
-    description: 'Meditation, Ganga aarti, and an atmosphere of stillness shaped for inner renewal.',
-  },
-];
+// export const travelPackages: TravelPackage[] = [
+//   {
+//     id: '1',
+//     title: 'Kedarnath Yatra',
+//     price: '₹18,000',
+//     duration: '6 Days / 5 Nights',
+//     description: 'A high-altitude yatra with guided darshan, serene stays, and sacred mountain mornings.',
+//   },
+//   {
+//     id: '2',
+//     title: 'Haridwar Yatra',
+//     price: '₹15,000',
+//     duration: '4 Days / 3 Nights',
+//     description: 'Temple aarti, Ganga serenity, and a warm spiritual stay designed for peaceful devotion.',
+//   },
+//   {
+//     id: '3',
+//     title: 'Dwarka Yatra',
+//     price: '₹16,500',
+//     duration: '5 Days / 4 Nights',
+//     description: 'A sacred coastal journey with temple visits, premium comfort, and calm ocean-side retreating.',
+//   },
+//   {
+//     id: '4',
+//     title: 'Rishikesh Yatra',
+//     price: '₹14,000',
+//     duration: '4 Days / 3 Nights',
+//     description: 'Meditation, Ganga aarti, and an atmosphere of stillness shaped for inner renewal.',
+//   },
+// ];
 
 export const bookingHistory: BookingRecord[] = [
   {

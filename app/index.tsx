@@ -1,11 +1,8 @@
 import React from 'react';
-import { NavigationIndependentTree } from '@react-navigation/native';
-import App from '../App';
+import { Redirect } from 'expo-router';
+import { useAuthStore } from '../src/store/useAuthStore';
 
-export default function HomeRoute() {
-  return (
-    <NavigationIndependentTree>
-      <App />
-    </NavigationIndependentTree>
-  );
+export default function IndexRoute() {
+  const user = useAuthStore((state) => state.user);
+  return <Redirect href={(user ? '/(tabs)/home' : '/(auth)/splash') as any} />;
 }
