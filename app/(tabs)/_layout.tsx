@@ -6,6 +6,11 @@ import { theme } from '../../src/constants/theme';
 
 export default function TabsLayout() {
   const user = useAuthStore((state) => state.user);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
+
+  if (!isHydrated) {
+    return null;
+  }
 
   if (!user) {
     return <Redirect href={'/(auth)/splash' as any} />;

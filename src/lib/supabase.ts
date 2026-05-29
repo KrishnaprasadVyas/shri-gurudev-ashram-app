@@ -1,8 +1,9 @@
 import 'react-native-url-polyfill/auto'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../types/database.types'
 
-let client: ReturnType<typeof createClient> | null = null
+let client: ReturnType<typeof createClient<Database>> | null = null
 const memoryStorage = new Map<string, string>()
 let warnedStorageFallback = false
 
@@ -67,7 +68,7 @@ export function getSupabaseClient() {
     )
   }
 
-  client = createClient(supabaseUrl, supabaseKey, {
+  client = createClient<Database>(supabaseUrl, supabaseKey, {
     auth: {
       storage: guardedStorage as any,
       autoRefreshToken: true,

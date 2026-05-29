@@ -1,20 +1,33 @@
 import React, { useState } from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuthStore } from '../../src/store/useAuthStore'
+import { signIn } from '../../src/services/auth'
 
 export default function LoginRoute() {
   const router = useRouter()
   const setUser = useAuthStore((state) => state.setUser)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
-  const handleLogin = () => {
-    setUser({ id: 'u-1', name: email || 'Guest User', email, role: 'member' })
-    router.replace('/(tabs)/home' as never)
+  const handleLogin = async () => {
+    setIsSubmitting(true)
+    setErrorMessage('')
+
+    try {
+      const user = await signIn(email.trim(), password)
+      setUser(user)
+      router.replace('/(tabs)/home' as never)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Could not sign in. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -27,9 +40,10 @@ export default function LoginRoute() {
         <Text style={styles.title}>Login to Ashram App</Text>
         <Input label="Email" value={email} onChangeText={setEmail} placeholder="name@example.com" />
         <Input label="Password" value={password} onChangeText={setPassword} placeholder="Enter password" secureTextEntry />
-        <Pressable onPress={handleLogin}>
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        <Pressable onPress={() => void handleLogin()} disabled={isSubmitting} style={({ pressed }) => [pressed && !isSubmitting ? styles.buttonPressed : null]}>
           <LinearGradient colors={['#7B4B00', '#B97512', '#E0A31F']} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Login</Text>
+            {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Login</Text>}
           </LinearGradient>
         </Pressable>
         <View style={styles.linkRow}>
@@ -95,6 +109,8 @@ const styles = StyleSheet.create({
   },
   primaryButton: { minHeight: 58, borderRadius: 999, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  buttonPressed: { opacity: 0.85 },
+  errorText: { color: '#B00020', fontSize: 13, fontWeight: '700' },
   linkRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   linkText: { color: '#8B5A00', fontSize: 14, fontWeight: '900' },
 })

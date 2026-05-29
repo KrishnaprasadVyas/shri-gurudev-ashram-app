@@ -6,6 +6,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { donationCategoriesMock, profileData, savedEventsMock, upcomingYatrasMock } from '../../src/services/profileMockData'
+import { signOut } from '../../src/services/auth'
 import { useAuthStore } from '../../src/store/useAuthStore'
 
 export default function ProfileRoute() {
@@ -20,11 +21,11 @@ export default function ProfileRoute() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 16) }]}>
         <View style={styles.header}>
           <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>{user?.name?.charAt(0) || 'D'}</Text>
+            <Text style={styles.avatarText}>{user?.fullName?.charAt(0) || 'D'}</Text>
           </View>
           <View style={styles.headerCopy}>
             <Text style={styles.greeting}>Jai Gurudev</Text>
-            <Text style={styles.name}>{user?.name || 'Devotee'}</Text>
+            <Text style={styles.name}>{user?.fullName || 'Devotee'}</Text>
           </View>
           <Pressable style={styles.bellIcon} onPress={() => router.push('/(tabs)/notifications' as never)}>
             <Ionicons name="notifications-outline" size={24} color="#2B231B" />
@@ -135,9 +136,14 @@ export default function ProfileRoute() {
           <SettingsRow
             icon="log-out-outline"
             label="Logout"
-            onPress={() => {
-              logout()
-              router.replace('/(auth)/splash' as never)
+            onPress={async () => {
+              try {
+                await signOut()
+                logout()
+                router.replace('/(auth)/splash' as never)
+              } catch (error) {
+                console.log(JSON.stringify(error, null, 2))
+              }
             }}
           />
         </View>
