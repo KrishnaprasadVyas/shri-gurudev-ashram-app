@@ -15,7 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker'
 import { Ionicons, MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useRouter } from 'expo-router'
-import Animated, { FadeInDown, FadeOut, Layout } from 'react-native-reanimated'
+import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { createBooking } from '../../services/bookings'
 import { useBookingDraftStore } from '../../store/useBookingDraftStore'
@@ -300,7 +300,7 @@ export default function BookingForm() {
           </View>
         </View>
 
-        <Animated.View key={step.key} entering={FadeInDown.duration(350)} exiting={FadeOut.duration(200)} layout={Layout.springify()} style={styles.card}>
+        <Animated.View key={step.key} entering={FadeInDown.duration(350)} exiting={FadeOut.duration(200)} style={styles.card}>
           {step.key === 'transport' ? (
             <View style={styles.sectionGap}>
               <View>

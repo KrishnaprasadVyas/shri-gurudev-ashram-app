@@ -13,14 +13,7 @@ import {
 } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import Reanimated, {
-  FadeIn,
-  FadeOut,
-  LinearTransition,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated'
+import Reanimated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const COLORS = {
@@ -127,11 +120,11 @@ function InfoAccordionCard({
   const visibleItems = expanded ? section.items : section.items.slice(0, Math.min(2, section.items.length))
 
   return (
-    <Reanimated.View layout={LinearTransition.duration(300)} style={styles.infoCard}>
+    <Reanimated.View style={styles.infoCard}>
       <Text style={styles.infoTitle}>{section.title}</Text>
       <View style={styles.divider} />
 
-      <Reanimated.View layout={LinearTransition.duration(300)}>
+      <Reanimated.View>
         {visibleItems.map((item, itemIndex) => (
           <Reanimated.View
             key={`${section.title}-${itemIndex}`}
