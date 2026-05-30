@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Alert,
   Animated,
   Image,
   PanResponder,
@@ -27,7 +28,7 @@ const COLORS = {
 
 const services = [
   { title: 'Book Travel', icon: 'flight', href: '/(tabs)/travel' },
-  { title: 'Donations', icon: 'volunteer-activism', href: '/(tabs)/profile' },
+  { title: 'Donations', icon: 'volunteer-activism', href: '/donation' },
   { title: 'Verify Collector', icon: 'verified-user', href: '/collector-dashboard' },
   { title: 'Announcements', icon: 'campaign', href: '/(tabs)/notifications' },
 ] as const
@@ -251,7 +252,9 @@ export default function HomeRoute() {
               <TouchableOpacity
                 key={item.title}
                 style={styles.card}
-                onPress={() => router.push(item.href as never)}
+                onPress={() => {
+                    router.push(item.href as never)
+                }}
                 activeOpacity={0.86}
               >
                 <MaterialIcons name={item.icon as any} size={42} color={COLORS.primary} />
