@@ -2,7 +2,7 @@ import React from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/useAuthStore';
-import { theme } from '../../src/constants/theme';
+import AppTabBar from '../../src/components/AppTabBar';
 
 export default function TabsLayout() {
   const user = useAuthStore((state) => state.user);
@@ -18,21 +18,9 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      tabBar={(props) => <AppTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: '#9E9080',
-        tabBarStyle: {
-          backgroundColor: '#FFFDF9',
-          borderTopColor: 'rgba(139,90,0,0.10)',
-          height: 72,
-          paddingTop: 8,
-          paddingBottom: 10,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '800',
-        },
       }}
     >
       <Tabs.Screen
