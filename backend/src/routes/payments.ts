@@ -1,0 +1,253 @@
+import crypto from 'crypto'
+import { Router } from 'express'
+import { HttpError } from '../errors'
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth'
+import { razorpay, razorpayKeySecret } from '../services/razorpay'
+import { supabaseAdmin } from '../services/supabaseAdmin'
+
+export const paymentsRouter = Router()
+
+type CreateOrderBody = {
+  bookingId?: string
+}
+
+type VerifyPaymentBody = {
+  bookingId?: string
+  razorpay_order_id?: string
+  razorpay_payment_id?: string
+  razorpay_signature?: string
+}
+
+paymentsRouter.post('/create-order', requireAuth, async (request, response, next) => {
+  try {
+    const { bookingId } = request.body as CreateOrderBody
+
+    if (!bookingId) {
+      throw new HttpError(400, 'bookingId is required')
+    }
+
+    const booking = await loadBooking(bookingId)
+    assertBookingOwner(booking.user_id, (request as AuthenticatedRequest).userId)
+
+    if (booking.status !== 'payment_pending') {
+      throw new HttpError(400, 'Booking is not pending payment')
+    }
+
+    const travelPackage = await loadPackage(booking.package_id)
+
+    if (!travelPackage.is_active) {
+      throw new HttpError(400, 'Travel package is not active')
+    }
+
+    if (travelPackage.remaining_seats < booking.traveler_count) {
+      throw new HttpError(400, 'Not enough seats available')
+    }
+
+    const amount = calculateAmount(travelPackage.price, booking.traveler_count)
+    const amountInPaise = Math.round(amount * 100)
+
+    const { data: existingPayment, error: existingError } = await supabaseAdmin
+      .from('payments')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .maybeSingle()
+
+    if (existingError) {
+      throw new HttpError(500, existingError.message)
+    }
+
+    if (existingPayment?.status === 'captured') {
+      throw new HttpError(409, 'Booking is already paid')
+    }
+
+    if (existingPayment?.status === 'created' && existingPayment.razorpay_order_id) {
+      response.json({
+        order: {
+          id: existingPayment.razorpay_order_id,
+          amount: amountInPaise,
+          currency: 'INR',
+        },
+        booking,
+      })
+      return
+    }
+
+    const order = await razorpay.orders.create({
+      amount: amountInPaise,
+      currency: 'INR',
+      receipt: booking.booking_reference,
+      notes: {
+        bookingId,
+      },
+    })
+
+    const paymentPayload = {
+      booking_id: bookingId,
+      amount,
+      payment_method: 'razorpay',
+      razorpay_order_id: order.id,
+      status: 'created',
+    }
+
+    const paymentQuery = existingPayment
+      ? supabaseAdmin.from('payments').update(paymentPayload).eq('id', existingPayment.id)
+      : supabaseAdmin.from('payments').insert(paymentPayload)
+
+    const { error: paymentError } = await paymentQuery
+
+    if (paymentError) {
+      throw new HttpError(500, paymentError.message)
+    }
+
+    response.json({ order, booking })
+  } catch (error) {
+    next(error)
+  }
+})
+
+paymentsRouter.post('/verify', requireAuth, async (request, response, next) => {
+  try {
+    const { bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = request.body as VerifyPaymentBody
+
+    if (!bookingId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      throw new HttpError(400, 'bookingId, razorpay_order_id, razorpay_payment_id, and razorpay_signature are required')
+    }
+
+    if (!isValidPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature)) {
+      throw new HttpError(400, 'Invalid Razorpay signature')
+    }
+
+    const booking = await loadBooking(bookingId)
+    assertBookingOwner(booking.user_id, (request as AuthenticatedRequest).userId)
+
+    if (booking.status === 'paid') {
+      throw new HttpError(409, 'Booking is already paid')
+    }
+
+    const { data: existingPayment, error: existingPaymentError } = await supabaseAdmin
+      .from('payments')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .maybeSingle()
+
+    if (existingPaymentError) {
+      throw new HttpError(500, existingPaymentError.message)
+    }
+
+    if (!existingPayment || existingPayment.razorpay_order_id !== razorpay_order_id) {
+      throw new HttpError(400, 'Razorpay order does not match this booking')
+    }
+
+    if (existingPayment.status === 'captured') {
+      throw new HttpError(409, 'Booking is already paid')
+    }
+
+    const { data: duplicatePayment, error: duplicateError } = await supabaseAdmin
+      .from('payments')
+      .select('id')
+      .eq('razorpay_payment_id', razorpay_payment_id)
+      .maybeSingle()
+
+    if (duplicateError) {
+      throw new HttpError(500, duplicateError.message)
+    }
+
+    if (duplicatePayment) {
+      throw new HttpError(409, 'Razorpay payment has already been processed')
+    }
+
+    const travelPackage = await loadPackage(booking.package_id)
+    const amount = calculateAmount(travelPackage.price, booking.traveler_count)
+
+    if (travelPackage.remaining_seats < booking.traveler_count) {
+      throw new HttpError(400, 'Not enough seats available')
+    }
+
+    await captureBookingPayment({
+      bookingId,
+      razorpayOrderId: razorpay_order_id,
+      razorpayPaymentId: razorpay_payment_id,
+      razorpaySignature: razorpay_signature,
+      paymentMethod: 'razorpay',
+    })
+
+    response.json({ success: true })
+  } catch (error) {
+    next(error)
+  }
+})
+
+function isValidPaymentSignature(orderId: string, paymentId: string, signature: string) {
+  const expectedSignature = crypto
+    .createHmac('sha256', razorpayKeySecret)
+    .update(`${orderId}|${paymentId}`)
+    .digest('hex')
+
+  return expectedSignature.length === signature.length && crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(signature))
+}
+
+async function loadBooking(bookingId: string) {
+  const { data: booking, error } = await supabaseAdmin
+    .from('bookings')
+    .select('*')
+    .eq('id', bookingId)
+    .single()
+
+  if (error || !booking) {
+    throw new HttpError(404, 'Booking not found')
+  }
+
+  return booking
+}
+
+async function loadPackage(packageId: string) {
+  const { data: travelPackage, error } = await supabaseAdmin
+    .from('travel_packages')
+    .select('id, price, remaining_seats, is_active')
+    .eq('id', packageId)
+    .single()
+
+  if (error || !travelPackage) {
+    throw new HttpError(404, 'Travel package not found')
+  }
+
+  return travelPackage
+}
+
+function calculateAmount(packagePrice: number, travelerCount: number) {
+  const amount = Number(packagePrice) * travelerCount
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new HttpError(400, 'Invalid payable amount')
+  }
+
+  return amount
+}
+
+function assertBookingOwner(bookingUserId: string, requestUserId: string) {
+  if (bookingUserId !== requestUserId) {
+    throw new HttpError(403, 'Booking does not belong to the authenticated user')
+  }
+}
+
+async function captureBookingPayment(input: {
+  bookingId: string
+  razorpayOrderId: string
+  razorpayPaymentId: string
+  razorpaySignature?: string | null
+  paymentMethod?: string | null
+  gatewayFee?: number | null
+}) {
+  const { error } = await supabaseAdmin.rpc('capture_booking_payment' as never, {
+    p_booking_id: input.bookingId,
+    p_razorpay_order_id: input.razorpayOrderId,
+    p_razorpay_payment_id: input.razorpayPaymentId,
+    p_razorpay_signature: input.razorpaySignature ?? null,
+    p_payment_method: input.paymentMethod ?? 'razorpay',
+    p_gateway_fee: input.gatewayFee ?? null,
+  } as never)
+
+  if (error) {
+    throw new HttpError(500, error.message)
+  }
+}

@@ -36,7 +36,7 @@ export const bookingHistory: BookingRecord[] = [
     id: 'b1',
     bookingId: 'BK-000245',
     packageName: 'Haridwar Yatra',
-    status: 'Pending',
+    status: 'Payment Pending',
     travelDate: '12 Jun 2026',
     amount: '₹15,000',
   },
@@ -44,7 +44,7 @@ export const bookingHistory: BookingRecord[] = [
     id: 'b2',
     bookingId: 'BK-000198',
     packageName: 'Dwarka Yatra',
-    status: 'Verified',
+    status: 'Paid',
     travelDate: '01 Jul 2026',
     amount: '₹16,500',
   },
@@ -52,7 +52,7 @@ export const bookingHistory: BookingRecord[] = [
     id: 'b3',
     bookingId: 'BK-000181',
     packageName: 'Kedarnath Yatra',
-    status: 'Rejected',
+    status: 'Cancelled',
     travelDate: '22 Jul 2026',
     amount: '₹18,000',
   },
@@ -61,8 +61,8 @@ export const bookingHistory: BookingRecord[] = [
 export const notifications: NotificationItem[] = [
   {
     id: 'n1',
-    title: 'Payment under review',
-    message: 'Your Goa booking proof is waiting for admin verification.',
+    title: 'Payment pending',
+    message: 'Complete Razorpay checkout to confirm your yatra booking.',
     time: '10 min ago',
   },
   {
@@ -73,8 +73,8 @@ export const notifications: NotificationItem[] = [
   },
   {
     id: 'n3',
-    title: 'Document upload needed',
-    message: 'Please upload an ID document for your Himalayan trip.',
+    title: 'Booking paid',
+    message: 'Your Razorpay payment was verified successfully.',
     time: '1 day ago',
   },
 ];
@@ -82,14 +82,14 @@ export const notifications: NotificationItem[] = [
 export const collectorTasks: CollectorTask[] = [
   {
     id: 'c1',
-    title: 'Verify payment proof',
-    description: 'Review new booking uploads and verify transaction details.',
+    title: 'Follow up pending payment',
+    description: 'Help yatris complete Razorpay checkout for open bookings.',
     status: 'Open',
   },
   {
     id: 'c2',
-    title: 'Document review',
-    description: 'Check uploaded identity documents for completed bookings.',
+    title: 'Journey coordination',
+    description: 'Share reporting details for paid and upcoming bookings.',
     status: 'In Review',
   },
 ];

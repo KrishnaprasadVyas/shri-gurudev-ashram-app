@@ -7,7 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 const checklist = [
   { key: 'aadhaar', label: 'Aadhaar document uploaded', icon: 'badge' },
   { key: 'selfie', label: 'Selfie photo verified', icon: 'face' },
-  { key: 'payment', label: 'Payment proof matched', icon: 'payments' },
+  { key: 'identityApproved', label: 'Identity documents approved', icon: 'check-circle' },
 ]
 
 export default function CollectorVerificationRoute() {
@@ -61,17 +61,14 @@ export default function CollectorVerificationRoute() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Payment summary</Text>
+          <Text style={styles.sectionTitle}>Booking status</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total amount</Text>
-            <Text style={styles.summaryValue}>INR 48,000</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Amount paid</Text>
+            <Text style={styles.summaryLabel}>Booking paid</Text>
             <Text style={styles.summaryValue}>INR 24,000</Text>
           </View>
-          <View style={styles.progressTrack}>
-            <View style={styles.progressFill} />
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Status</Text>
+            <Text style={styles.summaryValue}>Partial payment</Text>
           </View>
         </View>
 

@@ -103,7 +103,6 @@ export default function CustomTabBar({ state, navigation }: CustomTabBarProps) {
   // Hide tab bar during the booking flow
   if (
     pathname.includes('/travel/booking') ||
-    pathname.includes('/travel/upload-documents') ||
     pathname.includes('/travel/payment') ||
     pathname.includes('/travel/success')
   ) {

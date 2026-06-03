@@ -4,7 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ActivityIndicator } from 'react-native'
-import { getBookingsByUser, getCurrentUser } from '../../../../src/services'
+import { getBookingById } from '../../../../src/services'
 import { Booking } from '../../../../src/types/travel'
 
 export default function BookingDetailsRoute() {
@@ -20,14 +20,7 @@ export default function BookingDetailsRoute() {
 
     void (async () => {
       try {
-        const currentUser = await getCurrentUser()
-
-        if (!currentUser) {
-          throw new Error('Please sign in to view booking details.')
-        }
-
-        const bookings = await getBookingsByUser(currentUser.id)
-        const selectedBooking = bookings.find((item) => item.id === bookingId) ?? null
+        const selectedBooking = await getBookingById(bookingId)
 
         if (isMounted) {
           setBooking(selectedBooking)
@@ -93,7 +86,7 @@ export default function BookingDetailsRoute() {
           <SummaryTile label="Created" value={formatDate(booking.createdAt ?? '')} icon="event" />
           <SummaryTile label="Amount" value={`INR ${booking.totalAmount.toLocaleString('en-IN')}`} icon="payments" />
           <SummaryTile label="Reference" value={booking.bookingReference} icon="confirmation-number" />
-          <SummaryTile label="Review" value="Admin verification" icon="verified-user" />
+          <SummaryTile label="Payment" value={formatStatus(booking.status)} icon="verified-user" />
         </View>
 
         <View style={styles.actions}>
@@ -101,9 +94,11 @@ export default function BookingDetailsRoute() {
             <Text style={styles.primaryButtonText}>View Status</Text>
             <MaterialIcons name="arrow-forward" size={18} color="#fff" />
           </Pressable>
-          <Pressable style={styles.secondaryButton} onPress={() => router.push(`/(tabs)/travel/upload-documents/${booking.id}` as never)}>
-            <Text style={styles.secondaryButtonText}>Upload Documents</Text>
-          </Pressable>
+          {booking.status === 'payment_pending' ? (
+            <Pressable style={styles.secondaryButton} onPress={() => router.push(`/(tabs)/travel/payment?bookingId=${booking.id}&bookingReference=${booking.bookingReference}` as never)}>
+              <Text style={styles.secondaryButtonText}>Pay Now</Text>
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -132,6 +127,10 @@ function formatDate(dateValue: string) {
     month: 'short',
     year: 'numeric',
   })
+}
+
+function formatStatus(status: Booking['status']) {
+  return status.replace('_', ' ')
 }
 
 const styles = StyleSheet.create({

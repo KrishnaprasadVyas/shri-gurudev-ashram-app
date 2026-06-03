@@ -3,19 +3,17 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { MaterialIcons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { collectorTasks } from '../src/services/mockData'
 
 const stats = [
   { label: 'Assigned yatris', value: '128', icon: 'groups' },
-  { label: 'Pending payments', value: '42', icon: 'hourglass-empty' },
-  { label: 'Collected this month', value: 'INR 1.84L', icon: 'account-balance-wallet' },
-  { label: 'Upcoming dues', value: '18', icon: 'event-note' },
+  { label: 'Payment pending', value: '42', icon: 'hourglass-empty' },
+  { label: 'Paid bookings', value: '86', icon: 'check-circle' },
+  { label: 'Upcoming yatras', value: '18', icon: 'event-note' },
 ]
 
 export default function CollectorDashboardRoute() {
-  const router = useRouter()
   const insets = useSafeAreaInsets()
 
   return (
@@ -31,7 +29,7 @@ export default function CollectorDashboardRoute() {
                 <View style={styles.headerCopy}>
                   <Text style={styles.kicker}>Namaste, Collector</Text>
                   <Text style={styles.title}>Premium spiritual operations</Text>
-                  <Text style={styles.subtitle}>Manage collections, verification, and follow-ups with calm precision.</Text>
+                  <Text style={styles.subtitle}>Manage paid bookings, pending payments, and journey follow-ups with calm precision.</Text>
                 </View>
                 <Pressable style={styles.analyticsButton}>
                   <MaterialIcons name="timeline" size={20} color="#8B5A00" />
@@ -53,8 +51,8 @@ export default function CollectorDashboardRoute() {
               <View style={styles.summaryCard}>
                 <View style={styles.summaryTopRow}>
                   <View>
-                    <Text style={styles.summaryLabel}>Daily collection summary</Text>
-                    <Text style={styles.summaryValue}>INR 65,400 recovery pending</Text>
+                    <Text style={styles.summaryLabel}>Daily booking summary</Text>
+                    <Text style={styles.summaryValue}>42 bookings awaiting Razorpay payment</Text>
                   </View>
                   <View style={styles.summaryPill}>
                     <Text style={styles.summaryPillText}>74% complete</Text>
@@ -67,17 +65,14 @@ export default function CollectorDashboardRoute() {
             </BlurView>
 
             <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionTitle}>Verification queue</Text>
-              <Pressable onPress={() => router.push('/collector-verification' as never)}>
-                <Text style={styles.seeAll}>Open review</Text>
-              </Pressable>
+              <Text style={styles.sectionTitle}>Operations queue</Text>
             </View>
           </View>
         }
         renderItem={({ item }) => (
-          <Pressable style={styles.taskCard} onPress={() => router.push('/collector-verification' as never)}>
+          <Pressable style={styles.taskCard}>
             <View style={styles.taskIcon}>
-              <MaterialIcons name="verified-user" size={22} color="#8B5A00" />
+              <MaterialIcons name="event-note" size={22} color="#8B5A00" />
             </View>
             <View style={styles.taskCopy}>
               <Text style={styles.taskTitle}>{item.title}</Text>
