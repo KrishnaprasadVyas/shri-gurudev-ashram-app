@@ -1,20 +1,56 @@
 import React from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-
-const steps = [
-  { title: 'Booking submitted', detail: 'Your yatra request has reached the ashram desk.', done: true },
-  { title: 'Documents review', detail: 'Identity and travel documents are checked by the team.', done: false },
-  { title: 'Payment verification', detail: 'Payment proof is matched with the booking reference.', done: false },
-  { title: 'Journey confirmed', detail: 'Final itinerary and reporting details are shared.', done: false },
-]
+import { getBookingById } from '../../../../src/services'
+import { Booking } from '../../../../src/types/travel'
 
 export default function BookingStatusRoute() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>()
+  const [booking, setBooking] = React.useState<Booking | null>(null)
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [errorMessage, setErrorMessage] = React.useState('')
+
+  React.useEffect(() => {
+    let isMounted = true
+
+    void (async () => {
+      try {
+        const bookingData = await getBookingById(bookingId)
+
+        if (isMounted) {
+          setBooking(bookingData)
+        }
+      } catch (error) {
+        if (isMounted) {
+          setErrorMessage(error instanceof Error ? error.message : 'Could not load booking status.')
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    })()
+
+    return () => {
+      isMounted = false
+    }
+  }, [bookingId])
+
+  const steps = buildSteps(booking?.status ?? 'payment_pending')
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color="#8B5A00" />
+        </View>
+      </SafeAreaView>
+    )
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -25,11 +61,15 @@ export default function BookingStatusRoute() {
           </Pressable>
           <View>
             <Text style={styles.kicker}>Booking status</Text>
-            <Text style={styles.title}>{bookingId}</Text>
+            <Text style={styles.title}>{booking?.bookingReference ?? bookingId}</Text>
           </View>
         </View>
 
         <View style={styles.timelineCard}>
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+          <View style={styles.statusPill}>
+            <Text style={styles.statusText}>{formatStatus(booking?.status ?? 'payment_pending')}</Text>
+          </View>
           <View style={styles.timelineLine} />
           {steps.map((step, index) => (
             <View key={step.title} style={styles.timelineRow}>
@@ -48,9 +88,23 @@ export default function BookingStatusRoute() {
   )
 }
 
+function buildSteps(status: Booking['status']) {
+  return [
+    { title: 'Booking created', detail: 'Your yatra booking was created with payment pending.', done: true },
+    { title: 'Razorpay payment', detail: status === 'payment_pending' ? 'Complete Razorpay checkout to confirm your seat.' : 'Payment was completed through Razorpay.', done: status !== 'payment_pending' },
+    { title: 'Booking paid', detail: 'Backend verification marks the booking as paid and decrements seats.', done: status === 'paid' || status === 'completed' },
+    { title: 'Journey completed', detail: 'This status is updated after the yatra is completed.', done: status === 'completed' },
+  ]
+}
+
+function formatStatus(status: Booking['status']) {
+  return status.replace('_', ' ')
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F3EA' },
   content: { paddingHorizontal: 18, paddingBottom: 48, gap: 18 },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   backButton: {
     width: 44,
@@ -76,7 +130,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
     elevation: 5,
   },
-  timelineLine: { position: 'absolute', left: 37, top: 40, bottom: 42, width: 2, backgroundColor: '#F0E7DD' },
+  statusPill: { alignSelf: 'flex-start', borderRadius: 999, backgroundColor: '#FFF0D9', paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16 },
+  statusText: { color: '#8B5A00', fontSize: 12, fontWeight: '900', textTransform: 'capitalize' },
+  timelineLine: { position: 'absolute', left: 37, top: 84, bottom: 42, width: 2, backgroundColor: '#F0E7DD' },
   timelineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 16, marginBottom: 22 },
   timelineDot: {
     width: 32,
@@ -94,4 +150,5 @@ const styles = StyleSheet.create({
   timelineCopy: { flex: 1 },
   stepTitle: { color: '#2C1D10', fontSize: 17, fontWeight: '900' },
   stepDetail: { color: '#7E7162', fontSize: 13, lineHeight: 20, marginTop: 4 },
+  errorText: { color: '#D32F2F', fontSize: 13, fontWeight: '800', marginBottom: 12 },
 })

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { TravelPackage } from '../types/travel'
-import { BusType, PaymentPlanType, RoomType, TransportType } from '../utils/yatraPricing'
+import { BusType, RoomType, TransportType } from '../utils/yatraPricing'
 
 export type BookingDraftValues = {
   transportType: TransportType | ''
@@ -17,12 +17,8 @@ export type BookingDraftValues = {
   aadhaarPhotoUri: string
   selfiePhotoLabel: string
   selfiePhotoUri: string
-  paymentPlan: PaymentPlanType
-  paymentMode: string
   numberOfTravelers: string
   specialNotes: string
-  utr: string
-  proofLabel: string
   bookingReference: string
 }
 
@@ -49,12 +45,8 @@ const initialState: BookingDraftValues = {
   aadhaarPhotoUri: '',
   selfiePhotoLabel: '',
   selfiePhotoUri: '',
-  paymentPlan: 'full',
-  paymentMode: 'UPI',
   numberOfTravelers: '1',
   specialNotes: '',
-  utr: '',
-  proofLabel: '',
   bookingReference: '',
 }
 

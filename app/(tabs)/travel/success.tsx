@@ -4,14 +4,10 @@ import { MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useBookingDraftStore } from '../../../src/store/useBookingDraftStore'
 
 export default function SuccessRoute() {
   const router = useRouter()
   const { bookingId, bookingReference } = useLocalSearchParams<{ bookingId?: string; bookingReference?: string }>()
-  const resetDraft = useBookingDraftStore((state) => state.resetDraft)
-
-  const draft = useBookingDraftStore()
 
   return (
     <SafeAreaView style={styles.container}>
@@ -19,20 +15,16 @@ export default function SuccessRoute() {
         <View style={styles.successIcon}>
           <MaterialIcons name="check" size={42} color="#fff" />
         </View>
-        <Text style={styles.kicker}>Booking submitted</Text>
-        <Text style={styles.title}>Your yatra request has been created.</Text>
+        <Text style={styles.kicker}>Payment successful</Text>
+        <Text style={styles.title}>Your yatra booking is paid.</Text>
         <View style={styles.card}>
-          <InfoRow label="Package" value={draft.selectedPackage?.title ?? 'Unknown Yatra'} />
-          <InfoRow label="Travelers" value={draft.numberOfTravelers ?? '1'} />
-          <InfoRow label="Payment Mode" value={draft.paymentMode ?? 'Pending'} />
           <InfoRow label="Booking Reference" value={bookingReference ?? 'Pending reference'} />
           <InfoRow label="Booking ID" value={bookingId ?? 'Created'} />
-          <Text style={styles.note}>Your booking is pending admin verification. We will update the status after review.</Text>
+          <Text style={styles.note}>Your payment was verified by the backend and your seat count has been updated.</Text>
         </View>
 
         <Pressable
           onPress={() => {
-            resetDraft()
             router.replace('/(tabs)/home' as never)
           }}
         >

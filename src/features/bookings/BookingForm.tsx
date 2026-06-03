@@ -196,12 +196,11 @@ export default function BookingForm() {
         packageId: selectedPackage.id,
         travelerCount,
         specialNotes: draft.specialNotes,
-        totalAmount,
       })
 
       updateField('bookingReference', booking.bookingReference)
       router.replace({
-        pathname: '/(tabs)/travel/upload-documents/[bookingId]',
+        pathname: '/(tabs)/travel/payment',
         params: {
           bookingId: booking.id,
           bookingReference: booking.bookingReference,
@@ -442,10 +441,10 @@ export default function BookingForm() {
               {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
               <View style={styles.priceCard}>
-                <Text style={styles.priceCardLabel}>Supabase booking total</Text>
+                <Text style={styles.priceCardLabel}>Estimated booking total</Text>
                 <Text style={styles.priceValue}>{formatAmount(totalAmount)}</Text>
-                <Text style={styles.installmentNote}>
-                  This total uses the live package price and traveler count. Transport and room choices are preserved as draft preferences.
+                <Text style={styles.paymentNote}>
+                  Final payable amount is calculated by the backend from the selected package and traveler count.
                 </Text>
               </View>
 
@@ -1016,7 +1015,7 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: '900',
   },
-  installmentNote: {
+  paymentNote: {
     color: COLORS.muted,
     fontSize: 13,
     lineHeight: 20,

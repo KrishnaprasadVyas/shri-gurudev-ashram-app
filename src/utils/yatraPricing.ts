@@ -1,7 +1,6 @@
 export type TransportType = 'Flight' | 'Train'
 export type BusType = 'AC Train' | 'Non-AC Train'
 export type RoomType = 'AC Room' | 'Non-AC Room'
-export type PaymentPlanType = 'full' | 'installments'
 
 export type YatraPriceOption = {
   amount: number
@@ -20,16 +19,4 @@ export const YATRA_PRICE_MATRIX: Record<string, YatraPriceOption> = {
 export function getYatraPrice(transportType: TransportType, roomType: RoomType, busType?: BusType | null) {
   const key = `${transportType === 'Train' ? busType ?? 'AC Train' : 'Flight'}|${roomType}`
   return YATRA_PRICE_MATRIX[key] ?? YATRA_PRICE_MATRIX['Flight|AC Room']
-}
-
-export function getInstallmentBreakdown(total: number) {
-  const first = Math.round(total / 3)
-  const second = Math.round(total / 3)
-  const third = total - first - second
-
-  return [
-    { label: 'Installment 1', amount: first, due: 'Today' },
-    { label: 'Installment 2', amount: second, due: '30 days' },
-    { label: 'Installment 3', amount: third, due: '60 days' },
-  ]
 }

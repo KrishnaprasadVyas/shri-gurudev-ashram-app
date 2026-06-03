@@ -7,7 +7,7 @@ export type TravelPackage = {
   description: string;
 };
 
-export type BookingStatus = 'pending' | 'verified' | 'rejected' | 'confirmed';
+export type BookingStatus = 'payment_pending' | 'paid' | 'cancelled' | 'completed';
 
 export type Booking = {
   id: string;
@@ -17,8 +17,6 @@ export type Booking = {
   travelerCount: number;
   specialNotes: string | null;
   totalAmount: number;
-  paidAmount: number;
-  remainingAmount: number;
   status: BookingStatus;
   createdAt?: string;
 };
@@ -27,14 +25,13 @@ export type CreateBookingInput = {
   packageId: string;
   travelerCount: number;
   specialNotes?: string;
-  totalAmount: number;
 };
 
 export type BookingRecord = {
   id: string;
   bookingId: string;
   packageName: string;
-  status: 'Pending' | 'Verified' | 'Rejected';
+  status: 'Payment Pending' | 'Paid' | 'Cancelled' | 'Completed';
   travelDate: string;
   amount: string;
 };

@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from '
 import { MaterialIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { getBookingsByUser, getCurrentUser } from '../../../src/services'
+import { getBookingsByUser } from '../../../src/services'
 import { Booking } from '../../../src/types/travel'
 
 export default function BookingHistoryRoute() {
@@ -31,13 +31,7 @@ export default function BookingHistoryRoute() {
     setErrorMessage(null)
 
     try {
-      const currentUser = await getCurrentUser()
-
-      if (!currentUser) {
-        throw new Error('Please sign in to view your bookings.')
-      }
-
-      const bookingData = await getBookingsByUser(currentUser.id)
+      const bookingData = await getBookingsByUser()
       setBookings(bookingData)
     } catch (error) {
       console.log('BOOKING HISTORY ERROR', JSON.stringify(error, null, 2))
@@ -78,10 +72,7 @@ export default function BookingHistoryRoute() {
             <Text style={styles.cardLabel}>Package ID</Text>
             <Text style={styles.bookingId}>{item.packageId}</Text>
           </View>
-          <View style={styles.amountBlock}>
-            <Text style={styles.amount}>{formatAmount(item.totalAmount)}</Text>
-            <Text style={styles.amountMeta}>Paid {formatAmount(item.paidAmount)}</Text>
-          </View>
+          <Text style={styles.amount}>{formatAmount(item.totalAmount)}</Text>
         </View>
       </Pressable>
     )
@@ -238,9 +229,7 @@ const styles = StyleSheet.create({
   packageBlock: { flex: 1, gap: 4 },
   cardLabel: { color: '#A08D77', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8 },
   bookingId: { color: '#7E7162', fontSize: 13, fontWeight: '800' },
-  amountBlock: { alignItems: 'flex-end', gap: 4 },
   amount: { color: '#8B5A00', fontSize: 18, fontWeight: '900' },
-  amountMeta: { color: '#7E7162', fontSize: 12, fontWeight: '700' },
   emptyState: {
     backgroundColor: '#FFF',
     borderRadius: 26,
