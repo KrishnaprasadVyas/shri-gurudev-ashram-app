@@ -141,6 +141,21 @@ bookingsRouter.post('/', requireAuth, async (request, response, next) => {
     const bookingReference = `BK${Date.now()}${Math.floor(Math.random() * 1000)}`
     const authRequest = request as AuthenticatedRequest
 
+    // Check user verification status before allowing bookings
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from('users')
+      .select('verification_status')
+      .eq('id', authRequest.userId)
+      .maybeSingle()
+
+    if (profileError) {
+      throw new HttpError(500, 'Failed to load user profile')
+    }
+
+    if (!userProfile || userProfile.verification_status === 'not_submitted') {
+      throw new HttpError(403, 'Identity verification must be completed before booking.')
+    }
+
     const { data: booking, error: bookingError } = await supabaseAdmin
       .from('bookings')
       .insert({
