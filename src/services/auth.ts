@@ -9,7 +9,10 @@ export type AuthUser = {
   email: string | null
   phone: string
   role: string
-  isVerified: boolean
+  verificationStatus: 'not_submitted' | 'submitted' | 'verified' | 'rejected'
+  aadhaarNumber: string | null
+  aadhaarImagePath: string | null
+  selfieImagePath: string | null
 }
 
 type AuthMetadata = {
@@ -36,7 +39,10 @@ function mapUserRow(row: UserRow): AuthUser {
     email: row.email,
     phone: row.phone,
     role: row.role,
-    isVerified: row.is_verified,
+    verificationStatus: (row.verification_status as any) || 'not_submitted',
+    aadhaarNumber: row.aadhaar_number || null,
+    aadhaarImagePath: row.aadhaar_image_path || null,
+    selfieImagePath: row.selfie_image_path || null,
   }
 }
 
@@ -47,7 +53,10 @@ function mapFallbackAuthUser(user: { id: string; email?: string | null; user_met
     email: user.email ?? null,
     phone: user.user_metadata?.phone?.trim() || '',
     role: 'user',
-    isVerified: false,
+    verificationStatus: 'not_submitted',
+    aadhaarNumber: null,
+    aadhaarImagePath: null,
+    selfieImagePath: null,
   }
 }
 

@@ -196,13 +196,20 @@ export default function BookingForm() {
         packageId: selectedPackage.id,
         travelerCount,
         specialNotes: draft.specialNotes,
+        fullName: draft.fullName,
+        phoneNumber: draft.phoneNumber,
+        whatsappNumber: draft.whatsappNumber,
+        dob: draft.dob,
+        address: draft.address,
+        transportType,
+        busType: transportType === 'Train' ? busType : undefined,
+        roomType,
       })
 
       updateField('bookingReference', booking.bookingReference)
       router.replace({
-        pathname: '/(tabs)/travel/payment',
+        pathname: `/(tabs)/travel/upload-documents/${booking.id}`,
         params: {
-          bookingId: booking.id,
           bookingReference: booking.bookingReference,
         },
       } as never)

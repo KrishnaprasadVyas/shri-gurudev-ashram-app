@@ -22,8 +22,13 @@ paymentsRouter.post('/create-order', requireAuth, async (request, response, next
   try {
     const { bookingId } = request.body as CreateOrderBody
 
-    if (!bookingId) {
+    if (!bookingId || typeof bookingId !== 'string' || !bookingId.trim()) {
       throw new HttpError(400, 'bookingId is required')
+    }
+
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+    if (!uuidRegex.test(bookingId)) {
+      throw new HttpError(400, 'Invalid bookingId format (must be a valid UUID)')
     }
 
     const booking = await loadBooking(bookingId)
@@ -109,8 +114,25 @@ paymentsRouter.post('/verify', requireAuth, async (request, response, next) => {
   try {
     const { bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = request.body as VerifyPaymentBody
 
-    if (!bookingId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      throw new HttpError(400, 'bookingId, razorpay_order_id, razorpay_payment_id, and razorpay_signature are required')
+    if (!bookingId || typeof bookingId !== 'string' || !bookingId.trim()) {
+      throw new HttpError(400, 'bookingId is required')
+    }
+
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+    if (!uuidRegex.test(bookingId)) {
+      throw new HttpError(400, 'Invalid bookingId format (must be a valid UUID)')
+    }
+
+    if (!razorpay_order_id || typeof razorpay_order_id !== 'string' || !razorpay_order_id.trim()) {
+      throw new HttpError(400, 'razorpay_order_id is required')
+    }
+
+    if (!razorpay_payment_id || typeof razorpay_payment_id !== 'string' || !razorpay_payment_id.trim()) {
+      throw new HttpError(400, 'razorpay_payment_id is required')
+    }
+
+    if (!razorpay_signature || typeof razorpay_signature !== 'string' || !razorpay_signature.trim()) {
+      throw new HttpError(400, 'razorpay_signature is required')
     }
 
     if (!isValidPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature)) {

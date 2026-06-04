@@ -6,7 +6,10 @@ export type AuthUser = {
   email: string | null;
   phone: string;
   role: string;
-  isVerified: boolean;
+  verificationStatus: 'not_submitted' | 'submitted' | 'verified' | 'rejected';
+  aadhaarNumber: string | null;
+  aadhaarImagePath: string | null;
+  selfieImagePath: string | null;
 };
 
 type AuthState = {

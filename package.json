@@ -25,6 +25,7 @@
     "expo-router": "~56.2.8",
     "expo-status-bar": "~56.0.4",
     "express": "^5.2.1",
+    "multer": "^2.1.1",
     "nativewind": "4.2.4",
     "postcss": "8.4.49",
     "razorpay": "^2.9.6",
@@ -48,6 +49,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
     "@types/react": "~19.2.2",
     "babel-preset-expo": "56.0.12",
     "expo-doctor": "^1.19.8",
