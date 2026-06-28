@@ -20,6 +20,7 @@ export type AuthUser = {
   aadhaarNumber: string | null;
   aadhaarImagePath: string | null;
   selfieImagePath: string | null;
+  createdAt?: string;
 };
 
 type AuthMetadata = {
@@ -70,6 +71,7 @@ function mapUserRow(row: UserRow): AuthUser {
     aadhaarNumber: row.aadhaar_number || null,
     aadhaarImagePath: row.aadhaar_image_path || null,
     selfieImagePath: row.selfie_image_path || null,
+    createdAt: row.created_at || undefined,
   };
 }
 
@@ -88,6 +90,7 @@ function mapFallbackAuthUser(user: {
     aadhaarNumber: null,
     aadhaarImagePath: null,
     selfieImagePath: null,
+    createdAt: undefined,
   };
 }
 

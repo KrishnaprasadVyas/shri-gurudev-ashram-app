@@ -16,6 +16,9 @@ import { MaterialIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import Reanimated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { SEVA_LABELS } from '../../src/constants/seva'
+import { fetchUpcomingSevas } from '../../src/services/seva'
+import type { UpcomingSeva } from '../../src/types/seva'
 
 const COLORS = {
   background: '#F8F6F2',
@@ -26,12 +29,23 @@ const COLORS = {
   shadow: '#000',
 }
 
-const services = [
-  { title: 'Book Travel', icon: 'flight', href: '/(tabs)/travel' },
-  { title: 'Donations', icon: 'volunteer-activism', href: '/donation' },
-  { title: 'Verify Collector', icon: 'verified-user', href: '/collector-dashboard' },
-  { title: 'Announcements', icon: 'campaign', href: '/(tabs)/notifications' },
-] as const
+export type HomeServiceConfig = {
+  id: string
+  title: string
+  icon: string
+  route: string
+  enabled: boolean
+}
+
+const ASHRAM_SERVICES_CONFIG: HomeServiceConfig[] = [
+  { id: 'travel', title: 'Book Travel', icon: 'flight', route: '/(tabs)/travel', enabled: true },
+  { id: 'annadan', title: 'Annadan', icon: 'restaurant', route: '/(tabs)/seva/annadan', enabled: true },
+  { id: 'yajman', title: 'Guruji Aarti Seva', icon: 'local-fire-department', route: '/(tabs)/seva/yajman', enabled: true },
+  { id: 'donations', title: 'Donations', icon: 'volunteer-activism', route: '/donation', enabled: true },
+  { id: 'activity', title: 'My Activity', icon: 'history', route: '/(tabs)/my-sevas', enabled: true },
+  { id: 'collector', title: 'Verify Collector', icon: 'verified-user', route: '/collector-dashboard', enabled: true },
+  { id: 'announcements', title: 'Announcements', icon: 'campaign', route: '/(tabs)/notifications', enabled: true },
+]
 
 const infoSections = [
   {
@@ -98,6 +112,138 @@ const infoSections = [
 const dedicationText = 'Dedicated to Param Pujya Shri Swami Harichaitanyanand Saraswatiji Maharaj'
 
 type InfoSection = (typeof infoSections)[number]
+
+// ─── Upcoming Sevas Feed ────────────────────────────────────────────────────
+function UpcomingSevasFeed() {
+  const router = useRouter()
+  const [sevas, setSevas] = useState<UpcomingSeva[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchUpcomingSevas()
+      .then(setSevas)
+      .catch(() => setSevas([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return null
+  if (sevas.length === 0) return null
+
+  return (
+    <View style={sevaStyles.section}>
+      <View style={sevaStyles.sectionHeader}>
+        <Text style={sevaStyles.heading}>Upcoming Ashram Services</Text>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/my-sevas' as never)} style={sevaStyles.mySevasLink}>
+          <MaterialIcons name="history" size={14} color="#8B5A00" />
+          <Text style={sevaStyles.mySevasLinkText}>My Activity →</Text>
+        </TouchableOpacity>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={sevaStyles.scroll}
+      >
+        {sevas.map((seva) => {
+          const label = SEVA_LABELS[seva.sevaType]
+          const dateStr = new Date(seva.date).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+          })
+          const href = seva.sevaType === 'annadan'
+            ? '/(tabs)/seva/annadan'
+            : '/(tabs)/seva/yajman'
+
+          return (
+            <Pressable
+              key={seva.id}
+              style={[sevaStyles.chip, !seva.isAvailable && sevaStyles.chipBooked]}
+              onPress={() => seva.isAvailable && router.push(href as never)}
+            >
+              <View style={[sevaStyles.chipIcon, { backgroundColor: `${label.color}18` }]}>
+                <MaterialIcons name={label.icon as any} size={18} color={seva.isAvailable ? label.color : '#B9B1A9'} />
+              </View>
+              <View style={sevaStyles.chipText}>
+                <Text style={[sevaStyles.chipTitle, !seva.isAvailable && sevaStyles.chipTitleBooked]}>
+                  {label.title}
+                </Text>
+                <Text style={sevaStyles.chipDate}>{dateStr}</Text>
+                <Text style={[sevaStyles.chipStatus, { color: seva.isAvailable ? '#2F7132' : '#B9B1A9' }]}>
+                  {seva.isAvailable
+                    ? `${seva.spotsLeft ?? ''} ${seva.spotsLeft === 1 ? 'spot' : 'spots'} available`
+                    : 'Already Sponsored'}
+                </Text>
+              </View>
+              <View style={[sevaStyles.quickBtn, !seva.isAvailable && sevaStyles.quickBtnDisabled]}>
+                <Text style={[sevaStyles.quickBtnText, !seva.isAvailable && { color: '#B9B1A9' }]}>
+                  {seva.isAvailable ? 'Book →' : 'Closed'}
+                </Text>
+              </View>
+            </Pressable>
+          )
+        })}
+      </ScrollView>
+    </View>
+  )
+}
+
+const sevaStyles = StyleSheet.create({
+  section: { marginTop: 4 },
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginHorizontal: 22, marginBottom: 16,
+  },
+  heading: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#8B5A00',
+  },
+  mySevasLink: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#FFF0D9', borderRadius: 999,
+    paddingHorizontal: 12, paddingVertical: 5,
+  },
+  mySevasLinkText: { color: '#8B5A00', fontSize: 12, fontWeight: '800' },
+  scroll: { paddingHorizontal: 22, gap: 12 },
+  chip: {
+    width: 146,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 14,
+    justifyContent: 'space-between',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#F0E7DD',
+    shadowColor: '#5B4636',
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  chipBooked: { opacity: 0.65 },
+  chipIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipText: { gap: 2 },
+  chipTitle: { color: '#2B231B', fontSize: 13, fontWeight: '800' },
+  chipTitleBooked: { color: '#9E9080' },
+  chipDate: { color: '#8B5A00', fontSize: 15, fontWeight: '900' },
+  chipStatus: { fontSize: 11, fontWeight: '700' },
+  quickBtn: {
+    marginTop: 4,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#FAF6F0',
+    borderWidth: 1,
+    borderColor: '#E8D5BE',
+    alignItems: 'center',
+  },
+  quickBtnDisabled: { backgroundColor: '#F5EDE4', borderColor: '#F0E7DD' },
+  quickBtnText: { color: '#8B5A00', fontSize: 12, fontWeight: '900' },
+})
 
 function InfoAccordionCard({
   section,
@@ -248,12 +394,12 @@ export default function HomeRoute() {
           <Text style={styles.sectionTitle}>Essential Services</Text>
 
           <View style={styles.grid}>
-            {services.map((item) => (
+            {ASHRAM_SERVICES_CONFIG.filter((s) => s.enabled).map((item) => (
               <TouchableOpacity
-                key={item.title}
+                key={item.id}
                 style={styles.card}
                 onPress={() => {
-                    router.push(item.href as never)
+                    router.push(item.route as never)
                 }}
                 activeOpacity={0.86}
               >
@@ -263,6 +409,8 @@ export default function HomeRoute() {
               </TouchableOpacity>
             ))}
           </View>
+
+          <UpcomingSevasFeed />
 
           <View style={styles.infoSection}>
             {infoSections.map((section) => (

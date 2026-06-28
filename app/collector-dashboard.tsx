@@ -1,10 +1,12 @@
-import React from 'react'
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
+import React, { useState } from 'react'
+import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { MaterialIcons } from '@expo/vector-icons'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { collectorTasks } from '../src/services/mockData'
+import CollectorIDCard from '../src/components/CollectorIDCard'
+import { useAuthStore } from '../src/store/useAuthStore'
 
 const stats = [
   { label: 'Assigned yatris', value: '128', icon: 'groups' },
@@ -15,6 +17,8 @@ const stats = [
 
 export default function CollectorDashboardRoute() {
   const insets = useSafeAreaInsets()
+  const user = useAuthStore((s) => s.user)
+  const [showIDCard, setShowIDCard] = useState(false)
 
   return (
     <SafeAreaView style={styles.container}>
@@ -63,6 +67,74 @@ export default function CollectorDashboardRoute() {
                 </View>
               </View>
             </BlurView>
+
+            {/* My Digital ID Section */}
+            {user ? (
+              <View style={styles.idSection}>
+                <View style={styles.sectionTitleRow}>
+                  <Text style={styles.sectionTitle}>My Digital ID</Text>
+                  <View style={styles.idBadge}>
+                    <MaterialIcons name="verified" size={13} color="#2F7132" />
+                    <Text style={styles.idBadgeText}>Official</Text>
+                  </View>
+                </View>
+
+                <View style={styles.idActionsRow}>
+                  <Pressable
+                    style={styles.idActionBtn}
+                    onPress={() => setShowIDCard(true)}
+                  >
+                    <MaterialIcons name="badge" size={20} color="#8B5A00" />
+                    <Text style={styles.idActionText}>View ID</Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.idActionBtn}
+                    onPress={() => Alert.alert('Share', 'Share feature coming soon.')}
+                  >
+                    <MaterialIcons name="share" size={20} color="#8B5A00" />
+                    <Text style={styles.idActionText}>Share</Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.idActionBtn}
+                    onPress={() => Alert.alert('Download', 'Download feature coming soon.')}
+                  >
+                    <MaterialIcons name="download" size={20} color="#8B5A00" />
+                    <Text style={styles.idActionText}>Download</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+
+            {/* ID Card Modal */}
+            <Modal
+              visible={showIDCard}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setShowIDCard(false)}
+            >
+              <Pressable style={styles.modalBackdrop} onPress={() => setShowIDCard(false)}>
+                <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+                  <View style={styles.modalHandle} />
+                  <Text style={styles.modalTitle}>Collector ID Card</Text>
+                  {user ? <CollectorIDCard user={user} /> : null}
+                  <Pressable
+                    style={styles.modalClose}
+                    onPress={() => setShowIDCard(false)}
+                  >
+                    <LinearGradient
+                      colors={['#7B4B00', '#B97512', '#E0A31F']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.modalCloseGradient}
+                    >
+                      <Text style={styles.modalCloseText}>Close</Text>
+                    </LinearGradient>
+                  </Pressable>
+                </Pressable>
+              </Pressable>
+            </Modal>
 
             <View style={styles.sectionTitleRow}>
               <Text style={styles.sectionTitle}>Operations queue</Text>
@@ -126,4 +198,42 @@ const styles = StyleSheet.create({
   taskTitle: { color: '#2C1D10', fontSize: 16, fontWeight: '900' },
   taskDescription: { color: '#6B5A4A', fontSize: 13, lineHeight: 20, marginTop: 4 },
   taskStatus: { color: '#8B5A00', fontSize: 12, fontWeight: '900', marginTop: 8 },
+
+  // My Digital ID
+  idSection: { marginTop: 18, paddingHorizontal: 4 },
+  idBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#EEF8EF', borderRadius: 999,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  idBadgeText: { color: '#2F7132', fontSize: 11, fontWeight: '800' },
+  idActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  idActionBtn: {
+    flex: 1, alignItems: 'center', gap: 6, padding: 14,
+    backgroundColor: '#fff', borderRadius: 18,
+    borderWidth: 1, borderColor: '#F0E7DD',
+    shadowColor: '#5B4636', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  idActionText: { color: '#8B5A00', fontSize: 12, fontWeight: '800' },
+
+  // Modal
+  modalBackdrop: {
+    flex: 1, backgroundColor: 'rgba(32,19,9,0.52)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FAF6F0', borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    padding: 20, paddingBottom: 36, gap: 16,
+    shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 24, shadowOffset: { width: 0, height: -8 },
+    elevation: 16,
+  },
+  modalHandle: {
+    width: 44, height: 4, borderRadius: 2, backgroundColor: '#E8D5BE',
+    alignSelf: 'center', marginBottom: 4,
+  },
+  modalTitle: { color: '#2B231B', fontSize: 18, fontWeight: '900', textAlign: 'center' },
+  modalClose: { marginTop: 4 },
+  modalCloseGradient: { minHeight: 54, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  modalCloseText: { color: '#fff', fontSize: 16, fontWeight: '900' },
 })
