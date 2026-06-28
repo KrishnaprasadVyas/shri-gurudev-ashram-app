@@ -100,15 +100,20 @@ export default function CustomTabBar({ state, navigation }: CustomTabBarProps) {
   const bottomPadding = Math.max(insets.bottom, 8)
   const totalHeight = SVG_HEIGHT + bottomPadding
 
-  // Hide tab bar during the booking flow
-  const isBookingFlow =
+  // Hide tab bar during travel and seva booking / payment / history flows
+  const shouldHideTabBar =
     pathname === '/travel/booking' ||
     pathname.startsWith('/travel/booking/') ||
     pathname.startsWith('/travel/booking-status/') ||
     pathname.startsWith('/travel/payment') ||
-    pathname.startsWith('/travel/success')
+    pathname.startsWith('/travel/success') ||
+    pathname.includes('/seva-payment') ||
+    pathname.includes('/seva-success') ||
+    pathname.includes('/seva/annadan') ||
+    pathname.includes('/seva/yajman') ||
+    pathname.includes('/my-sevas')
 
-  if (isBookingFlow) {
+  if (shouldHideTabBar) {
     return null
   }
 
