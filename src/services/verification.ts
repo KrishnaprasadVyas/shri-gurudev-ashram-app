@@ -51,6 +51,7 @@ export async function uploadAadhaar(
     const { data } = await api.post<UploadImageResponse>(
       "/api/users/upload-aadhaar",
       formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
     );
     return data;
   } catch (error) {
@@ -77,6 +78,7 @@ export async function uploadSelfie(
     const { data } = await api.post<UploadImageResponse>(
       "/api/users/upload-selfie",
       formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
     );
     return data;
   } catch (error) {

@@ -5,8 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import RazorpayCheckout from 'react-native-razorpay'
-import { SEVA_LABELS } from '../../src/constants/seva'
-import type { SevaType } from '../../src/constants/seva'
+import { getSevaLabel, type SevaType } from '../../src/constants/seva'
 import { createSevaOrder, verifySevaPayment } from '../../src/services/seva'
 import { useAuthStore } from '../../src/store/useAuthStore'
 import { useSevaStore } from '../../src/store/useSevaStore'
@@ -69,7 +68,7 @@ export default function SevaPaymentRoute() {
   const currentUser = useAuthStore((s) => s.user)
 
   const type = (sevaType as SevaType) ?? 'annadan'
-  const label = SEVA_LABELS[type] ?? SEVA_LABELS.annadan
+  const label = getSevaLabel(type)
   const displayAmount = Number(amount || 0)
 
   const startPayment = async () => {

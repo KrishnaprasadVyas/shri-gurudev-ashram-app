@@ -13,10 +13,10 @@ import {
   View,
 } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import Reanimated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { SEVA_LABELS } from '../../src/constants/seva'
+import { getSevaLabel } from '../../src/constants/seva'
 import { fetchUpcomingSevas } from '../../src/services/seva'
 import { useAuthStore } from '../../src/store/useAuthStore'
 import type { UpcomingSeva } from '../../src/types/seva'
@@ -119,12 +119,14 @@ function UpcomingSevasFeed() {
   const [sevas, setSevas] = useState<UpcomingSeva[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchUpcomingSevas()
-      .then(setSevas)
-      .catch(() => setSevas([]))
-      .finally(() => setLoading(false))
-  }, [])
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchUpcomingSevas()
+        .then(setSevas)
+        .catch(() => setSevas([]))
+        .finally(() => setLoading(false))
+    }, [])
+  )
 
   if (loading) return null
   if (sevas.length === 0) return null
@@ -144,7 +146,7 @@ function UpcomingSevasFeed() {
         contentContainerStyle={sevaStyles.scroll}
       >
         {sevas.map((seva) => {
-          const label = SEVA_LABELS[seva.sevaType]
+          const label = getSevaLabel(seva.sevaType)
           const dateStr = new Date(seva.date).toLocaleDateString('en-IN', {
             day: '2-digit',
             month: 'short',

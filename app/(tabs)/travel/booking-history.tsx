@@ -1,7 +1,7 @@
 import React from 'react'
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { getBookingsByUser } from '../../../src/services'
 import { Booking, BookingStatus } from '../../../src/types/travel'
@@ -44,9 +44,11 @@ export default function BookingHistoryRoute() {
     }
   }, [])
 
-  React.useEffect(() => {
-    void loadBookings()
-  }, [loadBookings])
+  useFocusEffect(
+    React.useCallback(() => {
+      void loadBookings()
+    }, [loadBookings])
+  )
 
   const renderBookingCard = React.useCallback(({ item }: { item: Booking }) => {
     const bookingStatusTone = getBookingStatusTone(item.status)

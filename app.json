@@ -54,7 +54,8 @@
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       "expo-secure-store",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-sharing"
     ],
     "extra": {
       "router": {},

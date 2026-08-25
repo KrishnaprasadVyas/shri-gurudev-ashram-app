@@ -143,7 +143,9 @@ export async function uploadProfileImage(imageUri: string): Promise<string> {
   } as any)
 
   try {
-    const { data } = await api.post<{ publicUrl: string }>('/api/users/upload-profile-image', formData)
+    const { data } = await api.post<{ publicUrl: string }>('/api/users/upload-profile-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
     return data.publicUrl
   } catch (error) {
     throw new Error('Could not upload profile image. Please try again.')

@@ -12,14 +12,15 @@ import {
 } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { SEVA_LABELS } from '../../src/constants/seva'
+import { getSevaLabel } from '../../src/constants/seva'
 import SevaReceipt from '../../src/components/SevaReceipt'
 import type { SevaBooking } from '../../src/types/seva'
 import { fetchSevaHistory } from '../../src/services/seva'
 import { getBookingsByUser } from '../../src/services/bookings'
+import { generateAndShareReceiptPdf } from '../../src/utils/pdfGenerator'
 import type { Booking } from '../../src/types/travel'
 import { useAuthStore } from '../../src/store/useAuthStore'
 import { useProtectedRoute } from '../../src/hooks/useProtectedRoute'
@@ -152,19 +153,21 @@ export default function MySevasRoute() {
   const [isLoadingData, setIsLoadingData] = useState(true)
   useProtectedRoute()
 
-  useEffect(() => {
-    Promise.all([
-      getBookingsByUser().catch(() => []),
-      fetchSevaHistory().catch(() => []),
-      getDonationHistory().catch(() => []),
-    ])
-      .then(([tb, sh, dh]) => {
-        setTravelBookings(tb)
-        setSevaHistory(sh)
-        setDonationsHistory(Array.isArray(dh) ? dh : dh?.data || [])
-      })
-      .finally(() => setIsLoadingData(false))
-  }, [])
+  useFocusEffect(
+    React.useCallback(() => {
+      Promise.all([
+        getBookingsByUser().catch(() => []),
+        fetchSevaHistory().catch(() => []),
+        getDonationHistory().catch(() => []),
+      ])
+        .then(([tb, sh, dh]) => {
+          setTravelBookings(tb)
+          setSevaHistory(sh)
+          setDonationsHistory(Array.isArray(dh) ? dh : dh?.data || [])
+        })
+        .finally(() => setIsLoadingData(false))
+    }, [])
+  )
 
   if (!isHydrated || !user) return null
 
@@ -173,8 +176,8 @@ export default function MySevasRoute() {
     ...sevaHistory.map((b): ActivityItem => ({
       id: b.id,
       category: b.sevaType,
-      title: SEVA_LABELS[b.sevaType]?.title || 'Seva Booking',
-      subtitle: SEVA_LABELS[b.sevaType]?.subtitle || 'Spiritual Sponsorship',
+      title: getSevaLabel(b.sevaType).title || 'Seva Booking',
+      subtitle: getSevaLabel(b.sevaType).subtitle || 'Spiritual Sponsorship',
       date: b.sevaDate,
       reference: b.bookingReference,
       amount: b.totalAmount,
@@ -221,20 +224,23 @@ export default function MySevasRoute() {
   }
 
   const onShare = async (booking: SevaBooking) => {
-    const label = SEVA_LABELS[booking.sevaType]
-    try {
-      await Share.share({
-        title: `${label.title} Receipt — Shri Gurudev Ashram`,
-        message:
-          `🙏 ${label.title} Receipt\n\n` +
-          `Devotee: ${booking.fullName}\n` +
-          `Seva Date: ${formatDate(booking.sevaDate)}\n` +
-          `Amount: ${formatAmount(booking.totalAmount)}\n` +
-          `Reference: ${booking.bookingReference}\n\n` +
-          `Issued by Shri Gurudev Ashram\n` +
-          `Jai Shri Gurudev! 🙏`,
-      })
-    } catch { /* user cancelled */ }
+    const devoteeName = (booking as any).fullName || (booking as any).devotee || 'Devotee'
+    const phoneNum = (booking as any).phoneNumber || (booking as any).phone || ''
+    
+    await generateAndShareReceiptPdf({
+      type: 'seva',
+      sevaData: {
+        receiptNumber: booking.bookingReference,
+        transactionId: booking.transactionId || 'PENDING',
+        transactionDate: booking.createdAt || new Date().toISOString(),
+        sevaType: booking.sevaType,
+        sevaDate: booking.sevaDate,
+        devotee: devoteeName,
+        phone: phoneNum,
+        amount: booking.totalAmount,
+        status: booking.status,
+      } as any
+    })
   }
 
   // Tab counts based on current category
