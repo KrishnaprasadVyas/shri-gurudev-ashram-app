@@ -15,9 +15,12 @@ export async function optionalAuth(request: Request, _response: Response, next: 
     if (!firebaseUser.phone_number) return next()
 
     const phone = normalizeFirebasePhone(firebaseUser.phone_number)
-    const profile = await supabaseAdmin.from('users').select('id, deleted_at').eq('phone', phone).is('deleted_at', null).maybeSingle()
+    const profile = await supabaseAdmin.from('users').select('id, deleted_at').eq('phone', phone).maybeSingle()
 
     if (profile.data) {
+      if (profile.data.deleted_at) {
+        await supabaseAdmin.from('users').update({ deleted_at: null }).eq('id', profile.data.id)
+      }
       ;(request as AuthenticatedRequest).userId = profile.data.id
     }
   } catch {
@@ -36,10 +39,13 @@ export async function requireAuth(request: Request, _response: Response, next: N
 
     const phone = normalizeFirebasePhone(firebaseUser.phone_number)
 
-    const profile = await supabaseAdmin.from('users').select('id, deleted_at').eq('phone', phone).is('deleted_at', null).maybeSingle()
+    const profile = await supabaseAdmin.from('users').select('id, deleted_at').eq('phone', phone).maybeSingle()
     if (profile.error) throw new HttpError(500, profile.error.message)
 
     if (profile.data) {
+      if (profile.data.deleted_at) {
+        await supabaseAdmin.from('users').update({ deleted_at: null }).eq('id', profile.data.id)
+      }
       ;(request as AuthenticatedRequest).userId = profile.data.id
       return next()
     }

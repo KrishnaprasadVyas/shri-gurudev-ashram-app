@@ -139,13 +139,11 @@ export async function connectAppDatabases() {
   await connectDonationDatabases()
 }
 
-app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
+app.use((error: unknown, req: Request, response: Response, _next: NextFunction) => {
   const status = error instanceof HttpError ? error.status : 500
   const message = error instanceof HttpError ? error.message : 'Internal server error'
 
-  if (!(error instanceof HttpError)) {
-    console.error('Unhandled error:', error)
-  }
+  console.error(`[API ERROR] ${req.method} ${req.url} (${status}):`, error)
 
   response.status(status).json({
     success: false,
