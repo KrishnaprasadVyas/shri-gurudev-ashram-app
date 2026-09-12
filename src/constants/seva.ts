@@ -1,8 +1,7 @@
 // ─── Seva Type ───────────────────────────────────────────────────────────────
 export type SevaType = 'annadan' | 'yajman';
 
-// ─── Display Labels ───────────────────────────────────────────────────────────
-export const SEVA_LABELS: Record<SevaType, { title: string; subtitle: string; icon: string; color: string }> = {
+export const SEVA_LABELS: Record<string, { title: string; subtitle: string; icon: string; color: string }> = {
   annadan: {
     title: 'Annadan',
     subtitle: 'Mahaprasad Seva',
@@ -16,6 +15,17 @@ export const SEVA_LABELS: Record<SevaType, { title: string; subtitle: string; ic
     color: '#B97512',
   },
 };
+
+const DEFAULT_SEVA_LABEL = {
+  title: 'Special Seva',
+  subtitle: 'Ashram Seva',
+  icon: 'spa', // generic spiritual/wellness icon
+  color: '#8B5A00', // standard ashram brown/gold
+};
+
+export function getSevaLabel(type: string) {
+  return SEVA_LABELS[type] || { ...DEFAULT_SEVA_LABEL, title: type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') };
+}
 
 export function generateTransactionId(): string {
   const timestamp = Date.now().toString(36).toUpperCase()

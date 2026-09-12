@@ -1,33 +1,23 @@
-import React, { useEffect } from 'react'
-import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { Pressable, ScrollView, StyleSheet, Text, View, Alert, Platform } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import * as Print from 'expo-print'
+import * as Sharing from 'expo-sharing'
+import * as FileSystem from 'expo-file-system/legacy'
 import SevaReceipt from '../../src/components/SevaReceipt'
-import type { SevaType } from '../../src/constants/seva'
-import { SEVA_LABELS, generateTransactionId } from '../../src/constants/seva'
-import type { SevaReceiptData, AnnadanBookingPurpose } from '../../src/types/seva'
+import { generateTransactionId, getSevaLabel, type SevaType } from '../../src/constants/seva'
+import type { SevaReceiptData } from '../../src/types/seva'
 import { useSevaStore } from '../../src/store/useSevaStore'
-import { PURPOSE_LABELS } from '../../src/features/annadan/constants'
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UNIVERSAL SEVA SUCCESS SCREEN
-// Params: sevaType, reference, transactionId, devotee, phone, sevaDate, amount
-// ─────────────────────────────────────────────────────────────────────────────
-function formatDateString(isoStr?: string): string {
-  if (!isoStr) return '—'
-  const parts = isoStr.split('T')[0].split('-').map(Number)
-  if (parts.length !== 3 || parts.some(isNaN)) return isoStr
-  const localDate = new Date(parts[0], parts[1] - 1, parts[2])
-  return localDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
-}
+import { generateAndShareReceiptPdf, generateAndDownloadReceiptPdf, generateReceiptHtml } from '../../src/utils/pdfGenerator'
 
 export default function SevaSuccessRoute() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const addToHistory = useSevaStore((s) => s.addToHistory)
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 
   const {
     sevaType,
@@ -37,7 +27,6 @@ export default function SevaSuccessRoute() {
     phone,
     sevaDate,
     amount,
-    // New fields
     bookingPurpose,
     beneficiaryName,
     identityType,
@@ -65,7 +54,7 @@ export default function SevaSuccessRoute() {
   }>()
 
   const type = (sevaType as SevaType) ?? 'annadan'
-  const label = SEVA_LABELS[type]
+  const label = getSevaLabel(type)
   const parsedAmount = amount ? Number(amount) : 0
   const finalTxnId = transactionId || generateTransactionId()
 
@@ -81,7 +70,6 @@ export default function SevaSuccessRoute() {
     paymentMethod: 'UPI / Online',
     status: 'paid',
     referenceNumber: reference ?? '—',
-    // New fields
     bookingPurpose: bookingPurpose || undefined,
     beneficiaryName: beneficiaryName || undefined,
     sponsorName: sponsorName || undefined,
@@ -92,7 +80,6 @@ export default function SevaSuccessRoute() {
     recurringPeriod: recurringPeriod || undefined,
   }
 
-  // Add to sevaHistory on mount so My Sevas screen can display it
   useEffect(() => {
     addToHistory({
       id: reference ?? `mock-${Date.now()}`,
@@ -105,7 +92,6 @@ export default function SevaSuccessRoute() {
       totalAmount: parsedAmount,
       status: 'paid',
       createdAt: new Date().toISOString(),
-      // New fields
       bookingPurpose: (bookingPurpose as any) || undefined,
       beneficiaryName: beneficiaryName || undefined,
       sponsorName: sponsorName || undefined,
@@ -114,44 +100,46 @@ export default function SevaSuccessRoute() {
       identityNumberMasked: identityNumberMasked || undefined,
       isRecurring: isRecurring === 'true',
     })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
-  const shareReceipt = async () => {
+  const generatePdfFile = async () => {
+    setIsGeneratingPdf(true)
     try {
-      let message = `🙏 ${label.title} Receipt\n\n`
-      if (bookingPurpose) {
-        const purposeLabel = PURPOSE_LABELS[bookingPurpose as AnnadanBookingPurpose] || bookingPurpose
-        message += `Purpose: ${purposeLabel}\n`
-      }
-      if (beneficiaryName) {
-        message += `Beneficiary: ${beneficiaryName}\n`
-      }
-      message += `Sponsor: ${sponsorName || devotee}\n`
-      message += `Phone: ${sponsorPhone || phone}\n`
-      message += `Seva Date: ${formatDateString(sevaDate)}\n`
-      if (isRecurring === 'true' && recurringPeriod) {
-        message += `Annual Booking Period: ${recurringPeriod}\n`
-      }
-      if (identityType && identityNumberMasked) {
-        const idLabel = identityType === 'aadhaar' ? 'Aadhaar' : 'PAN'
-        message += `${idLabel}: ${identityNumberMasked}\n`
-      }
-      message += `Amount: ₹${parsedAmount.toLocaleString('en-IN')}\n`
-      message += `Receipt No: ${reference}\n`
-      message += `Transaction ID: ${finalTxnId}\n\n`
-      message += `Issued by Shri Gurudev Ashram\n`
-      message += `Haridwar Road, Rishikesh, Uttarakhand — 249201\n\n`
-      message += `Jai Shri Gurudev! 🙏`
+      const html = await generateReceiptHtml({ type: 'seva', sevaData: receiptData })
+      console.log('[SevaSuccess] Generating PDF from HTML template...')
+      const { uri } = await Print.printToFileAsync({ html })
+      console.log('[SevaSuccess] PDF generated at URI:', uri)
 
-      await Share.share({
-        title: `${label.title} Receipt — Shri Gurudev Ashram`,
-        message,
-      })
-    } catch {
-      // user cancelled share — no-op
+      // Verify the file exists and is a PDF
+      const fileInfo = await FileSystem.getInfoAsync(uri)
+      if (!fileInfo.exists) {
+        console.error('[SevaSuccess] Generated PDF file does not exist at:', uri)
+        Alert.alert('Error', 'PDF file was not created. Please try again.')
+        return null
+      }
+      console.log('[SevaSuccess] PDF file verified, size:', fileInfo.size, 'bytes')
+
+      return uri
+    } catch (e) {
+      console.error('[SevaSuccess] PDF generation failed:', e)
+      Alert.alert('Error', 'Failed to generate PDF document. Please try again.')
+      return null
+    } finally {
+      setIsGeneratingPdf(false)
     }
   }
 
+  const shareReceiptPdf = async () => {
+    setIsGeneratingPdf(true)
+    await generateAndShareReceiptPdf({ type: 'seva', sevaData: receiptData })
+    setIsGeneratingPdf(false)
+  }
+
+  const downloadReceiptPdf = async () => {
+    setIsGeneratingPdf(true)
+    await generateAndDownloadReceiptPdf({ type: 'seva', sevaData: receiptData })
+    setIsGeneratingPdf(false)
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -159,7 +147,6 @@ export default function SevaSuccessRoute() {
         contentContainerStyle={[styles.content, { paddingTop: 16 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Success icon */}
         <View style={styles.successIcon}>
           <LinearGradient
             colors={['#7B4B00', '#B97512', '#E0A31F']}
@@ -180,10 +167,28 @@ export default function SevaSuccessRoute() {
             : 'May Guruji\'s blessings flow through you as you perform this sacred Aarti.'}
         </Text>
 
-        {/* Receipt */}
         <SevaReceipt data={receiptData} />
 
-        {/* Action buttons */}
+        <View style={styles.actionGrid}>
+          <Pressable
+            style={[styles.pdfButton, isGeneratingPdf && { opacity: 0.5 }]}
+            onPress={() => void downloadReceiptPdf()}
+            disabled={isGeneratingPdf}
+          >
+            <MaterialIcons name="file-download" size={20} color="#E65C00" />
+            <Text style={styles.pdfButtonText}>{isGeneratingPdf ? 'Generating...' : 'Download PDF'}</Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.pdfButton, isGeneratingPdf && { opacity: 0.5 }]}
+            onPress={() => void shareReceiptPdf()}
+            disabled={isGeneratingPdf}
+          >
+            <MaterialIcons name="share" size={18} color="#E65C00" />
+            <Text style={styles.pdfButtonText}>Share PDF</Text>
+          </Pressable>
+        </View>
+
         <Pressable onPress={() => router.push('/(tabs)/my-sevas' as never)}>
           <LinearGradient
             colors={['#7B4B00', '#B97512', '#E0A31F']}
@@ -195,28 +200,18 @@ export default function SevaSuccessRoute() {
           </LinearGradient>
         </Pressable>
 
-        <View style={styles.secondaryRow}>
-          {/* Share */}
-          <Pressable style={[styles.secondaryButton, { flex: 1 }]} onPress={() => void shareReceipt()}>
-            <MaterialIcons name="share" size={18} color="#8B5A00" />
-            <Text style={styles.secondaryButtonText}>Share Receipt</Text>
-          </Pressable>
-
-          {/* Back to Home */}
-          <Pressable
-            style={[styles.secondaryButton, { flex: 1 }]}
-            onPress={() => router.replace('/(tabs)/home' as never)}
-          >
-            <MaterialIcons name="home" size={18} color="#8B5A00" />
-            <Text style={styles.secondaryButtonText}>Back to Home</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() => router.replace('/(tabs)/home' as never)}
+        >
+          <MaterialIcons name="home" size={18} color="#8B5A00" />
+          <Text style={styles.secondaryButtonText}>Back to Home</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   )
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF6F0' },
   content: { paddingHorizontal: 18, paddingBottom: 56, gap: 20, alignItems: 'stretch' },
@@ -238,7 +233,14 @@ const styles = StyleSheet.create({
   primaryButton: { minHeight: 58, borderRadius: 999, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
 
-  secondaryRow: { flexDirection: 'row', gap: 12 },
+  actionGrid: { flexDirection: 'row', gap: 12 },
+  pdfButton: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    minHeight: 50, borderRadius: 14,
+    backgroundColor: '#FFF0D9',
+  },
+  pdfButtonText: { color: '#E65C00', fontSize: 14, fontWeight: '800' },
+
   secondaryButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     minHeight: 50, borderRadius: 999,

@@ -13,7 +13,7 @@ import { Image } from 'expo-image'
 import * as Linking from 'expo-linking'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons, MaterialIcons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { signOut } from '../../src/services/auth'
 import { getCurrentProfileInfo, getCurrentUserYatraStats, softDeleteCurrentUser, type ProfileInfo, type YatraStats } from '../../src/services/profile'
@@ -45,6 +45,7 @@ export default function ProfileRoute() {
   const insets = useSafeAreaInsets()
   const storeUser = useAuthStore((state) => state.user)
   const isHydrated = useAuthStore((state) => state.isHydrated)
+  const sevaHistory = useSevaStore((state) => state.sevaHistory)
   const logout = useAuthStore((state) => state.logout)
   const resetDraft = useBookingDraftStore((state) => state.resetDraft)
   const clearAadhaar = useAuthStore((state) => state.setAadhaarNumber)
@@ -87,9 +88,11 @@ export default function ProfileRoute() {
     }
   }, [])
 
-  React.useEffect(() => {
-    void loadProfile()
-  }, [loadProfile])
+  useFocusEffect(
+    React.useCallback(() => {
+      void loadProfile()
+    }, [loadProfile])
+  )
 
   const clearLocalSession = React.useCallback(() => {
     logout()
@@ -207,13 +210,13 @@ export default function ProfileRoute() {
             <StatCard icon="confirmation-number" label="Yatra Bookings" value={stats.totalBookings} />
             <StatCard icon="event-available" label="Upcoming Yatras" value={stats.upcomingYatras} />
             <StatCard icon="volunteer-activism" label="Active Sevas" value={
-              useSevaStore.getState().sevaHistory.filter((s: SevaBooking) => 
+              sevaHistory.filter((s: SevaBooking) => 
                 s.status === 'paid' && new Date(s.sevaDate) >= new Date(new Date().setHours(0,0,0,0))
               ).length
             } />
-            <StatCard icon="verified" label="Total Sevas" value={useSevaStore.getState().sevaHistory.length} />
+            <StatCard icon="verified" label="Total Sevas" value={sevaHistory.length} />
           </View>
-          {stats.totalBookings === 0 && useSevaStore.getState().sevaHistory.length === 0 ? (
+          {stats.totalBookings === 0 && sevaHistory.length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>No activity yet</Text>
               <Text style={styles.emptyText}>Your bookings and sevas will appear here.</Text>

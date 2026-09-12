@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import type { SevaReceiptData } from '../types/seva'
-import { SEVA_LABELS } from '../constants/seva'
+import { getSevaLabel } from '../constants/seva'
 
 // ─── Ashram Contact Info ──────────────────────────────────────────────────────
 const ASHRAM_INFO = {
@@ -104,7 +104,7 @@ const SEVA_PURPOSE_LABELS: Record<string, string> = {
 }
 
 export default function SevaReceipt({ data }: SevaReceiptProps) {
-  const label = SEVA_LABELS[data.sevaType]
+  const label = getSevaLabel(data.sevaType)
   const color = statusColor(data.status)
 
   return (

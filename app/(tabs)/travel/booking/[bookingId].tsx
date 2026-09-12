@@ -6,6 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ActivityIndicator, Alert } from 'react-native'
 import { cancelBooking, getBookingById } from '../../../../src/services'
 import TravelReceipt, { type TravelReceiptData } from '../../../../src/components/TravelReceipt'
+import { generateAndShareReceiptPdf } from '../../../../src/utils/pdfGenerator'
 import { Booking } from '../../../../src/types/travel'
 
 export default function BookingDetailsRoute() {
@@ -126,27 +127,22 @@ export default function BookingDetailsRoute() {
 
   const shareReceipt = async () => {
     if (!booking) return
-    const ref = booking.bookingReference
-    const amount = booking.totalAmount.toLocaleString('en-IN')
-    const departure = booking.travelStartDate
-      ? new Date(booking.travelStartDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
-      : '—'
-    try {
-      await Share.share({
-        title: `Yatra Booking Receipt — Shri Gurudev Ashram`,
-        message:
-          `🙏 Yatra Booking Confirmed!\n\n` +
-          `Package: ${booking.packageTitle ?? booking.packageId}\n` +
-          `Booking Ref: ${ref}\n` +
-          `Departure: ${departure}\n` +
-          `Travelers: ${booking.travelerCount}\n` +
-          `Amount: ₹${amount}\n\n` +
-          `Issued by Shri Gurudev Ashram\n` +
-          `Jai Shri Gurudev! 🙏`,
-      })
-    } catch {
-      // user cancelled — no-op
-    }
+    await generateAndShareReceiptPdf({
+      type: 'travel',
+      travelData: {
+        bookingReference: booking.bookingReference,
+        packageTitle: booking.packageTitle || booking.packageId,
+        travelStartDate: booking.travelStartDate,
+        travelEndDate: booking.travelEndDate,
+        travelerCount: booking.travelerCount,
+        totalAmount: booking.totalAmount,
+        fullName: booking.fullName,
+        phoneNumber: booking.phoneNumber,
+        createdAt: booking.createdAt,
+        transportType: booking.transportType,
+        roomType: booking.roomType,
+      } as any
+    })
   }
 
   return (

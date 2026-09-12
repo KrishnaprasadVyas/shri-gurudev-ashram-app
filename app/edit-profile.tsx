@@ -31,8 +31,12 @@ export default function EditProfileRoute() {
   const [profile, setProfile] = React.useState<ProfileInfo | null>(null)
   const [fullName, setFullName] = React.useState('')
   const [profileImageUrl, setProfileImageUrl] = React.useState('')
-  const [selectedImageUri, setSelectedImageUri] = React.useState<string | null>(null)
   const [isImageCleared, setIsImageCleared] = React.useState(false)
+
+  // ─── Two-Phase Image Upload State ──────────────────────────────────────────
+  const [uploadedImageUrl, setUploadedImageUrl] = React.useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = React.useState(false)
+  const [uploadImageError, setUploadImageError] = React.useState('')
   
   const [isLoading, setIsLoading] = React.useState(true)
   const [isSaving, setIsSaving] = React.useState(false)
@@ -48,7 +52,7 @@ export default function EditProfileRoute() {
       setProfile(profileInfo)
       setFullName(profileInfo.fullName || '')
       setProfileImageUrl(profileInfo.profileImageUrl ?? '')
-      setSelectedImageUri(null)
+      setUploadedImageUrl(null)
       setIsImageCleared(false)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Could not load your profile.')
@@ -75,6 +79,28 @@ export default function EditProfileRoute() {
     return Object.keys(nextErrors).length === 0
   }
 
+  // ─── Two-Phase: Upload image when user taps "Upload" ──────────────────────
+  const handleUploadImage = React.useCallback(async (localUri: string) => {
+    setIsUploadingImage(true)
+    setUploadImageError('')
+    try {
+      const publicUrl = await uploadProfileImage(localUri)
+      setUploadedImageUrl(publicUrl)
+      setIsImageCleared(false)
+    } catch (error) {
+      setUploadImageError(error instanceof Error ? error.message : 'Upload failed. Please try again.')
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }, [])
+
+  // ─── Determine the confirmed image URI for display and save ───────────────
+  const confirmedImageUrl = uploadedImageUrl
+    ? uploadedImageUrl
+    : !isImageCleared && profileImageUrl
+    ? profileImageUrl
+    : null
+
   const handleSave = async () => {
     if (isSaving) return
     if (!validate()) return
@@ -84,16 +110,10 @@ export default function EditProfileRoute() {
 
     try {
       const trimmedName = fullName.trim()
-      let nextImageUrl: string | null = null
-      if (selectedImageUri) {
-        nextImageUrl = await uploadProfileImage(selectedImageUri)
-      } else if (!isImageCleared && profileImageUrl.trim()) {
-        nextImageUrl = profileImageUrl.trim()
-      }
       
       await updateCurrentProfile({
         fullName: trimmedName,
-        profileImageUrl: nextImageUrl,
+        profileImageUrl: confirmedImageUrl,
       })
 
       const refreshedUser = await refreshCurrentUser()
@@ -124,12 +144,6 @@ export default function EditProfileRoute() {
       </View>
     )
   }
-
-  const displayImageSource = selectedImageUri
-    ? { uri: selectedImageUri }
-    : !isImageCleared && profileImageUrl
-    ? { uri: profileImageUrl }
-    : null
 
   return (
     <SafeAreaView style={styles.container}>
@@ -162,16 +176,19 @@ export default function EditProfileRoute() {
             <Text style={styles.sectionTitle}>Profile Photo</Text>
             <ImageUploadWidget
               title="Profile picture"
-              label={displayImageSource ? 'Image selected' : 'No file selected'}
-              uri={displayImageSource ? displayImageSource.uri : null}
+              label={confirmedImageUrl ? 'Image uploaded' : 'No file selected'}
+              uri={confirmedImageUrl}
               onSelect={(uri) => {
-                setSelectedImageUri(uri)
                 if (!uri) {
+                  // Remove action
+                  setUploadedImageUrl(null)
                   setIsImageCleared(true)
-                } else {
-                  setIsImageCleared(false)
+                  setUploadImageError('')
                 }
               }}
+              onUpload={handleUploadImage}
+              isUploading={isUploadingImage}
+              uploadError={uploadImageError}
               aspectRatio={[1, 1]}
               disabled={isSaving}
             />

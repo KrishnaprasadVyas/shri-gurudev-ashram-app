@@ -983,45 +983,57 @@ export default function BookingForm() {
       </KeyboardAvoidingView>
 
       {activeDatePickerIndex !== null ? (
-        <Modal transparent animationType="fade" visible onRequestClose={() => setActiveDatePickerIndex(null)}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setActiveDatePickerIndex(null)}>
-            <Pressable style={styles.modalCard} onPress={() => undefined}>
-              <Text style={styles.modalTitle}>{activeDatePickerIndex === -1 ? 'Select Additional Seva Date' : 'Select Date of Birth'}</Text>
-              <DateTimePicker
-                value={activeDatePickerIndex === -1 && addonService ? new Date(addonService.bookingDate || new Date()) : activeDob ? new Date(activeDob) : new Date(1995, 0, 1)}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-                maximumDate={activeDatePickerIndex === -1 ? undefined : new Date()}
-                minimumDate={activeDatePickerIndex === -1 ? new Date() : minimumDate}
-                onChange={(event: any, selectedDate?: Date) => {
-                  if (event.type === 'dismissed' || !selectedDate) {
-                    if (Platform.OS !== 'ios') {
-                      setActiveDatePickerIndex(null)
+        Platform.OS === 'ios' ? (
+          <Modal transparent animationType="fade" visible onRequestClose={() => setActiveDatePickerIndex(null)}>
+            <Pressable style={styles.modalBackdrop} onPress={() => setActiveDatePickerIndex(null)}>
+              <Pressable style={styles.modalCard} onPress={() => undefined}>
+                <Text style={styles.modalTitle}>{activeDatePickerIndex === -1 ? 'Select Additional Seva Date' : 'Select Date of Birth'}</Text>
+                <DateTimePicker
+                  value={activeDatePickerIndex === -1 && addonService ? new Date(addonService.bookingDate || new Date()) : activeDob ? new Date(activeDob) : new Date(1995, 0, 1)}
+                  mode="date"
+                  display="spinner"
+                  maximumDate={activeDatePickerIndex === -1 ? undefined : new Date()}
+                  minimumDate={activeDatePickerIndex === -1 ? new Date() : minimumDate}
+                  onChange={(event: any, selectedDate?: Date) => {
+                    if (event.type === 'dismissed' || !selectedDate) return
+                    const isoDate = selectedDate.toISOString().split('T')[0]
+                    if (activeDatePickerIndex === -1) {
+                      if (addonService) setAddonService({ ...addonService, bookingDate: isoDate })
+                    } else if (activeDatePickerIndex !== null) {
+                      updatePassengerField(activeDatePickerIndex, 'dob', isoDate)
+                      updatePassengerField(activeDatePickerIndex, 'age', calculateAge(isoDate))
                     }
-                    return
-                  }
-                  const isoDate = selectedDate.toISOString().split('T')[0]
-                  if (activeDatePickerIndex === -1) {
-                    if (addonService) {
-                      setAddonService({ ...addonService, bookingDate: isoDate })
-                    }
-                  } else if (activeDatePickerIndex !== null) {
-                    updatePassengerField(activeDatePickerIndex, 'dob', isoDate)
-                    updatePassengerField(activeDatePickerIndex, 'age', calculateAge(isoDate))
-                  }
-                  if (Platform.OS !== 'ios') {
-                    setActiveDatePickerIndex(null)
-                  }
-                }}
-              />
-              {Platform.OS === 'ios' ? (
+                  }}
+                />
                 <TouchableOpacity style={styles.modalButton} onPress={() => setActiveDatePickerIndex(null)}>
                   <Text style={styles.modalButtonText}>Done</Text>
                 </TouchableOpacity>
-              ) : null}
+              </Pressable>
             </Pressable>
-          </Pressable>
-        </Modal>
+          </Modal>
+        ) : (
+          <DateTimePicker
+            value={activeDatePickerIndex === -1 && addonService ? new Date(addonService.bookingDate || new Date()) : activeDob ? new Date(activeDob) : new Date(1995, 0, 1)}
+            mode="date"
+            display="default"
+            maximumDate={activeDatePickerIndex === -1 ? undefined : new Date()}
+            minimumDate={activeDatePickerIndex === -1 ? new Date() : minimumDate}
+            onChange={(event: any, selectedDate?: Date) => {
+              if (event.type === 'dismissed' || !selectedDate) {
+                setActiveDatePickerIndex(null)
+                return
+              }
+              const isoDate = selectedDate.toISOString().split('T')[0]
+              if (activeDatePickerIndex === -1) {
+                if (addonService) setAddonService({ ...addonService, bookingDate: isoDate })
+              } else if (activeDatePickerIndex !== null) {
+                updatePassengerField(activeDatePickerIndex, 'dob', isoDate)
+                updatePassengerField(activeDatePickerIndex, 'age', calculateAge(isoDate))
+              }
+              setActiveDatePickerIndex(null)
+            }}
+          />
+        )
       ) : null}
     </SafeAreaView>
   )

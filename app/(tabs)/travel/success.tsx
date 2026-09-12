@@ -1,11 +1,15 @@
-import React from 'react'
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native'
+import React, { useState } from 'react'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, Alert, Platform } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import * as Print from 'expo-print'
+import * as Sharing from 'expo-sharing'
+import * as FileSystem from 'expo-file-system/legacy'
 import { getBookingById } from '../../../src/services'
 import TravelReceipt, { type TravelReceiptData } from '../../../src/components/TravelReceipt'
+import { generateAndShareReceiptPdf, generateAndDownloadReceiptPdf, generateReceiptHtml } from '../../../src/utils/pdfGenerator'
 import type { Booking } from '../../../src/types/travel'
 
 export default function SuccessRoute() {
@@ -15,6 +19,7 @@ export default function SuccessRoute() {
 
   const [booking, setBooking] = React.useState<Booking | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 
   React.useEffect(() => {
     if (!bookingId) {
@@ -49,31 +54,44 @@ export default function SuccessRoute() {
       }
     : null
 
-  const shareReceipt = async () => {
-    if (!booking) return
-    const ref = booking.bookingReference ?? bookingReference ?? '—'
-    const amount = booking.totalAmount.toLocaleString('en-IN')
-    const departure = booking.travelStartDate
-      ? new Date(booking.travelStartDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
-      : '—'
+  const generatePdfFile = async () => {
+    if (!receiptData) return null
+    setIsGeneratingPdf(true)
     try {
-      await Share.share({
-        title: `Yatra Booking Receipt — Shri Gurudev Ashram`,
-        message:
-          `🙏 Yatra Booking Confirmed!\n\n` +
-          `Package: ${booking.packageTitle ?? booking.packageId}\n` +
-          `Booking Ref: ${ref}\n` +
-          `Departure: ${departure}\n` +
-          `Travelers: ${booking.travelerCount}\n` +
-          `Amount Paid: ₹${amount}\n\n` +
-          `Issued by Shri Gurudev Ashram\n` +
-          `Palaskhed Sapkal, Dist. Buldhana, MH\n` +
-          `Contact: +91 91587 40007\n\n` +
-          `Jai Shri Gurudev! 🙏`,
-      })
-    } catch {
-      // user cancelled share — no-op
+      const html = await generateReceiptHtml({ type: 'travel', travelData: receiptData })
+      console.log('[TravelSuccess] Generating PDF from HTML template...')
+      const { uri } = await Print.printToFileAsync({ html })
+      console.log('[TravelSuccess] PDF generated at URI:', uri)
+
+      // Verify the file exists and is a PDF
+      const fileInfo = await FileSystem.getInfoAsync(uri)
+      if (!fileInfo.exists) {
+        console.error('[TravelSuccess] Generated PDF file does not exist at:', uri)
+        Alert.alert('Error', 'PDF file was not created. Please try again.')
+        return null
+      }
+      console.log('[TravelSuccess] PDF file verified, size:', fileInfo.size, 'bytes')
+
+      return uri
+    } catch (e) {
+      console.error('[TravelSuccess] PDF generation failed:', e)
+      Alert.alert('Error', 'Failed to generate PDF document. Please try again.')
+      return null
+    } finally {
+      setIsGeneratingPdf(false)
     }
+  }
+
+  const shareReceiptPdf = async () => {
+    setIsGeneratingPdf(true)
+    await generateAndShareReceiptPdf({ type: 'travel', travelData: receiptData })
+    setIsGeneratingPdf(false)
+  }
+
+  const downloadReceiptPdf = async () => {
+    setIsGeneratingPdf(true)
+    await generateAndDownloadReceiptPdf({ type: 'travel', travelData: receiptData })
+    setIsGeneratingPdf(false)
   }
 
   return (
@@ -82,7 +100,6 @@ export default function SuccessRoute() {
         contentContainerStyle={[styles.content, { paddingTop: 16 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Success icon */}
         <View style={styles.successIconWrap}>
           <LinearGradient
             colors={['#7B4B00', '#B97512', '#E0A31F']}
@@ -117,7 +134,6 @@ export default function SuccessRoute() {
           Your payment was verified and your reservation has been secured. Jai Shri Gurudev!
         </Text>
 
-        {/* Receipt or skeleton */}
         {isLoading ? (
           <View style={styles.loadingWrap}>
             <ActivityIndicator color="#8B5A00" />
@@ -126,7 +142,6 @@ export default function SuccessRoute() {
         ) : receiptData ? (
           <TravelReceipt data={receiptData} />
         ) : (
-          // Fallback when booking fetch fails — still show basic info
           <View style={styles.fallbackCard}>
             <MaterialIcons name="confirmation-number" size={28} color="#8B5A00" />
             <Text style={styles.fallbackRef}>{bookingReference ?? 'Booking confirmed'}</Text>
@@ -136,7 +151,28 @@ export default function SuccessRoute() {
           </View>
         )}
 
-        {/* Primary CTA */}
+        {receiptData && !isLoading && (
+          <View style={styles.actionGrid}>
+            <Pressable
+              style={[styles.pdfButton, isGeneratingPdf && { opacity: 0.5 }]}
+              onPress={() => void downloadReceiptPdf()}
+              disabled={isGeneratingPdf}
+            >
+              <MaterialIcons name="file-download" size={20} color="#E65C00" />
+              <Text style={styles.pdfButtonText}>{isGeneratingPdf ? 'Generating...' : 'Download PDF'}</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.pdfButton, isGeneratingPdf && { opacity: 0.5 }]}
+              onPress={() => void shareReceiptPdf()}
+              disabled={isGeneratingPdf}
+            >
+              <MaterialIcons name="share" size={18} color="#E65C00" />
+              <Text style={styles.pdfButtonText}>Share PDF</Text>
+            </Pressable>
+          </View>
+        )}
+
         <Pressable onPress={() => router.push('/(tabs)/travel/booking-history' as never)}>
           <LinearGradient
             colors={['#7B4B00', '#B97512', '#E0A31F']}
@@ -148,24 +184,13 @@ export default function SuccessRoute() {
           </LinearGradient>
         </Pressable>
 
-        {/* Secondary actions */}
-        <View style={styles.secondaryRow}>
-          <Pressable
-            style={[styles.secondaryButton, { flex: 1 }]}
-            onPress={() => void shareReceipt()}
-          >
-            <MaterialIcons name="share" size={18} color="#8B5A00" />
-            <Text style={styles.secondaryButtonText}>Share Receipt</Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.secondaryButton, { flex: 1 }]}
-            onPress={() => router.replace('/(tabs)/home' as never)}
-          >
-            <MaterialIcons name="home" size={18} color="#8B5A00" />
-            <Text style={styles.secondaryButtonText}>Back to Home</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() => router.replace('/(tabs)/home' as never)}
+        >
+          <MaterialIcons name="home" size={18} color="#8B5A00" />
+          <Text style={styles.secondaryButtonText}>Back to Home</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   )
@@ -211,7 +236,14 @@ const styles = StyleSheet.create({
   primaryButton: { minHeight: 58, borderRadius: 999, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
 
-  secondaryRow: { flexDirection: 'row', gap: 12 },
+  actionGrid: { flexDirection: 'row', gap: 12 },
+  pdfButton: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    minHeight: 50, borderRadius: 14,
+    backgroundColor: '#FFF0D9',
+  },
+  pdfButtonText: { color: '#E65C00', fontSize: 14, fontWeight: '800' },
+
   secondaryButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     minHeight: 50, borderRadius: 999,
