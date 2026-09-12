@@ -83,12 +83,14 @@ export default function SuccessRoute() {
   }
 
   const shareReceiptPdf = async () => {
+    if (!receiptData) return
     setIsGeneratingPdf(true)
     await generateAndShareReceiptPdf({ type: 'travel', travelData: receiptData })
     setIsGeneratingPdf(false)
   }
 
   const downloadReceiptPdf = async () => {
+    if (!receiptData) return
     setIsGeneratingPdf(true)
     await generateAndDownloadReceiptPdf({ type: 'travel', travelData: receiptData })
     setIsGeneratingPdf(false)

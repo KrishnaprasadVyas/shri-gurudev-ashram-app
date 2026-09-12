@@ -59,8 +59,9 @@ const getAssetBase64 = async (module: any): Promise<string> => {
 
 export type ReceiptSourceData = {
   type: 'seva' | 'travel' | 'donation'
-  sevaData?: SevaReceiptData
-  travelData?: TravelReceiptData
+  sevaData?: SevaReceiptData | null
+  travelData?: TravelReceiptData | null
+  donationData?: any
 }
 
 export async function generateReceiptHtml(source: ReceiptSourceData): Promise<string> {
