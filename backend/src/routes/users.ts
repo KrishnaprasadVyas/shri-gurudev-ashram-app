@@ -16,8 +16,9 @@ usersRouter.get("/me", requireAuth, async (request, response, next) => {
       .from("users")
       .select("*")
       .eq("id", (request as AuthenticatedRequest).userId)
-      .single();
-    if (error || !data) throw new HttpError(404, "User profile not found");
+      .maybeSingle();
+    if (error) throw new HttpError(500, error.message);
+    if (!data) throw new HttpError(404, "User profile not found");
     response.json({ user: data });
   } catch (error) {
     next(error);
@@ -58,7 +59,7 @@ usersRouter.delete("/me", requireAuth, async (request, response, next) => {
   try {
     const { error } = await supabaseAdmin
       .from("users")
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: new Date().toISOString(), full_name: '' })
       .eq("id", (request as AuthenticatedRequest).userId);
 
     if (error) throw new HttpError(400, error.message);

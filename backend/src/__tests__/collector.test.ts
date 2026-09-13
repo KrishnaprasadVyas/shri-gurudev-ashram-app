@@ -3,6 +3,14 @@ jest.mock("../services/donationReceipt", () => ({
   publicReceiptUrl: jest.fn().mockReturnValue("https://example.com/receipt.pdf"),
 }))
 
+jest.mock("fs", () => ({
+  ...jest.requireActual("fs"),
+  promises: {
+    mkdir: jest.fn().mockResolvedValue(undefined),
+    writeFile: jest.fn().mockResolvedValue(undefined),
+  },
+}))
+
 jest.mock("../models/user", () => ({
   DonationUser: {
     findById: jest.fn(),
@@ -28,7 +36,7 @@ jest.mock("../models/donationHead", () => ({
   },
 }))
 
-import { collectCashDonation } from "../controllers/collector"
+import { collectCashDonation, applyCollector } from "../controllers/collector"
 import { DonationUser } from "../models/user"
 import { Donation } from "../models/donation"
 
@@ -195,5 +203,88 @@ describe("Collector Cash Donation Controller", () => {
       })
     )
     expect(next).not.toHaveBeenCalled()
+  })
+
+  describe("applyCollector", () => {
+    const validFiles = [
+      { fieldname: "aadharFront", originalname: "front.jpg", buffer: Buffer.from("front") },
+      { fieldname: "aadharBack", originalname: "back.jpg", buffer: Buffer.from("back") },
+    ]
+
+    it("rejects application if user is already COLLECTOR_APPROVED", async () => {
+      const request = {
+        donationUser: { id: "user_1" },
+        body: { fullName: "Jane Doe", address: "123 Street", panNumber: "ABCDE1234F" },
+        files: validFiles,
+      } as any
+      const response = { json: jest.fn() } as any
+      const next = jest.fn()
+
+      ;(DonationUser.findById as jest.Mock).mockResolvedValue({
+        _id: "user_1",
+        role: "COLLECTOR_APPROVED",
+      })
+
+      await applyCollector(request, response, next)
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 400,
+          message: "User is not eligible to apply",
+        })
+      )
+    })
+
+    it("rejects application if collector application is already pending", async () => {
+      const request = {
+        donationUser: { id: "user_2" },
+        body: { fullName: "Jane Doe", address: "123 Street", panNumber: "ABCDE1234F" },
+        files: validFiles,
+      } as any
+      const response = { json: jest.fn() } as any
+      const next = jest.fn()
+
+      ;(DonationUser.findById as jest.Mock).mockResolvedValue({
+        _id: "user_2",
+        role: "COLLECTOR_PENDING",
+        collectorProfile: { status: "pending" },
+      })
+
+      await applyCollector(request, response, next)
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 400,
+          message: "User is not eligible to apply",
+        })
+      )
+    })
+
+    it("allows reapplication if previous application was rejected", async () => {
+      const request = {
+        donationUser: { id: "user_3" },
+        body: { fullName: "Jane Doe", address: "123 Street", panNumber: "ABCDE1234F" },
+        files: validFiles,
+      } as any
+      const response = { json: jest.fn() } as any
+      const next = jest.fn()
+
+      const mockUser = {
+        _id: "user_3",
+        role: "USER",
+        collectorProfile: { status: "rejected", rejectedReason: "Blurry images" },
+        save: jest.fn().mockResolvedValue(true),
+      }
+      ;(DonationUser.findById as jest.Mock).mockResolvedValue(mockUser)
+
+      await applyCollector(request, response, next)
+      expect(mockUser.save).toHaveBeenCalled()
+      expect(mockUser.role).toBe("COLLECTOR_PENDING")
+      expect(response.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "Collector application submitted successfully.",
+        })
+      )
+      expect(next).not.toHaveBeenCalled()
+    })
   })
 })

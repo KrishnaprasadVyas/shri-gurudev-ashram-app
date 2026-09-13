@@ -147,16 +147,45 @@ async function request(path: string, init: RequestInit = {}) {
 async function finishFirebaseUser(user: User, forceRefresh = false) {
   const token = await getIdToken(user, forceRefresh);
   await setSecureItem(FIREBASE_TOKEN_KEY, token);
-  const donation = await request("/api/auth/verify-firebase-token", {
-    method: "POST",
-    body: JSON.stringify({ token }),
-  });
-  if (donation?.token)
-    await setSecureItem(DONATION_TOKEN_KEY, donation.token);
-  const profile = await request("/api/users/me", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return mapUser(profile.user);
+  try {
+    const donation = await request("/api/auth/verify-firebase-token", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    });
+    if (donation?.token)
+      await setSecureItem(DONATION_TOKEN_KEY, donation.token);
+  } catch (e) {
+    console.warn("verify-firebase-token warning:", e);
+  }
+
+  let profileUser = null;
+  try {
+    const profile = await request("/api/users/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    profileUser = profile?.user;
+  } catch (error) {
+    if (!forceRefresh) {
+      throw error;
+    }
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const retryProfile = await request("/api/users/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      profileUser = retryProfile?.user;
+    } catch {
+      profileUser = {
+        id: user.uid,
+        phone: user.phoneNumber?.replace(/\D/g, "").slice(-10) || "",
+        full_name: "",
+        role: "user",
+        verification_status: "not_submitted",
+      };
+    }
+  }
+
+  return mapUser(profileUser);
 }
 export async function requestPhoneOtp(
   phone: string,

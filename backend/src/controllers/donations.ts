@@ -93,7 +93,11 @@ export async function createDonationOrder(request: Request, response: Response, 
 
 export async function verifyDonationPayment(request: Request, response: Response, next: NextFunction) {
   try {
-    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, donationId } = request.body ?? {}
+    const body = request.body ?? {}
+    const donationId = body.donationId
+    const razorpayOrderId = body.razorpayOrderId || body.razorpay_order_id
+    const razorpayPaymentId = body.razorpayPaymentId || body.razorpay_payment_id
+    const razorpaySignature = body.razorpaySignature || body.razorpay_signature
     if ((!donationId && !razorpayOrderId) || !razorpayPaymentId || !razorpaySignature) {
       throw new HttpError(400, 'Missing payment verification fields')
     }

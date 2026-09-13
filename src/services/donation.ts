@@ -56,16 +56,12 @@ export const getCollectorDashboard = async () => {
 }
 
 export const applyCollector = async (body: FormData) => {
-  const { data } = await donationApi.post('/api/collector/apply', body, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const { data } = await donationApi.post('/api/collector/apply', body)
   return data
 }
 
 export const reapplyCollector = async (body: FormData) => {
-  const { data } = await donationApi.post('/api/collector/reapply', body, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const { data } = await donationApi.post('/api/collector/reapply', body)
   return data
 }
 

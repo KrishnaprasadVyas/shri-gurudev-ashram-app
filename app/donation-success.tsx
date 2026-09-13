@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { ActivityIndicator, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -17,6 +17,15 @@ export default function DonationSuccessRoute() {
   }>()
 
   const [isDownloading, setIsDownloading] = useState(false)
+
+  useEffect(() => {
+    const onBackPress = () => {
+      router.replace('/(tabs)/home' as never)
+      return true
+    }
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress)
+    return () => subscription.remove()
+  }, [router])
 
   const handleDownload = async () => {
     if (!donationId || isDownloading) return

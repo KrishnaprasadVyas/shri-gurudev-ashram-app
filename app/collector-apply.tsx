@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import React, { useCallback, useEffect, useState } from 'react'
+import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -30,6 +30,38 @@ export default function CollectorApplyRoute() {
   const [fieldErrors, setFieldErrors] = useState<{ fullName?: string; address?: string; panNumber?: string; aadharFront?: string; aadharBack?: string }>({})
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+
+  const handleBackWithWarning = useCallback(() => {
+    const hasUnsavedData =
+      Boolean(address.trim()) ||
+      Boolean(panNumber.trim()) ||
+      Boolean(aadharFront) ||
+      Boolean(aadharBack) ||
+      Boolean(fullName.trim() && fullName.trim() !== (user?.fullName || ''))
+
+    if (hasUnsavedData) {
+      Alert.alert(
+        'Discard Application?',
+        'You have unsaved changes in your application. Are you sure you want to leave?',
+        [
+          { text: 'Keep Editing', style: 'cancel' },
+          {
+            text: 'Discard & Leave',
+            style: 'destructive',
+            onPress: () => router.back(),
+          },
+        ]
+      )
+      return true
+    }
+    router.back()
+    return true
+  }, [address, panNumber, aadharFront, aadharBack, fullName, user?.fullName, router])
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', handleBackWithWarning)
+    return () => subscription.remove()
+  }, [handleBackWithWarning])
 
   const loadStatus = async () => { 
     try { 
@@ -117,8 +149,11 @@ export default function CollectorApplyRoute() {
         <MaterialIcons name="hourglass-top" size={64} color="#B97512" />
         <Text style={styles.title}>Application under review</Text>
         <Text style={styles.body}>Your documents were submitted. The ashram team must approve your application before your collector ID is activated.</Text>
-        <Pressable onPress={() => router.back()} style={styles.button}>
-          <Text style={styles.buttonText}>Back</Text>
+        <Pressable onPress={() => void loadStatus()} style={styles.button} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Check Approval Status</Text>}
+        </Pressable>
+        <Pressable onPress={() => router.back()} style={styles.secondaryButton}>
+          <Text style={styles.secondaryButtonText}>Back</Text>
         </Pressable>
       </SafeAreaView>
     )
@@ -132,7 +167,7 @@ export default function CollectorApplyRoute() {
         <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 16) }]} keyboardShouldPersistTaps="handled">
           
           <View style={styles.header}>
-            <Pressable style={styles.backButton} onPress={() => router.back()} disabled={submitting}>
+            <Pressable style={styles.backButton} onPress={handleBackWithWarning} disabled={submitting}>
               <MaterialIcons name="arrow-back" size={22} color="#8B5A00" />
             </Pressable>
             <View>
@@ -228,6 +263,8 @@ const styles = StyleSheet.create({
   
   button: { minHeight: 56, borderRadius: 999, backgroundColor: '#E65C00', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }, 
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '900' }, 
+  secondaryButton: { minHeight: 48, borderRadius: 999, borderWidth: 1.5, borderColor: '#F0E7DD', backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, marginTop: 6 },
+  secondaryButtonText: { color: '#8B5A00', fontSize: 15, fontWeight: '800' },
   
   rejectedBanner: { flexDirection: 'row', backgroundColor: '#FFEBEE', padding: 16, borderRadius: 16, gap: 12, borderWidth: 1, borderColor: '#FFCDD2' }, 
   rejectedCopy: { flex: 1, gap: 4 }, 

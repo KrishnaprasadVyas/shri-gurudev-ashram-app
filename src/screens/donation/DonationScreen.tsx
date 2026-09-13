@@ -290,14 +290,19 @@ export default function DonationScreen() {
         theme: { color: '#E65C00' },
       })
 
+      const rawCheckout = checkoutResult as any
+      const razorpayOrderId = checkoutResult.razorpay_order_id || rawCheckout.razorpayOrderId || orderRes.razorpayOrderId
+      const razorpayPaymentId = checkoutResult.razorpay_payment_id || rawCheckout.razorpayPaymentId
+      const razorpaySignature = checkoutResult.razorpay_signature || rawCheckout.razorpaySignature
+
       const verifyRes = await verifyDonationPayment({
         donationId: donationRes.donationId,
-        razorpayOrderId: checkoutResult.razorpay_order_id,
-        razorpayPaymentId: checkoutResult.razorpay_payment_id,
-        razorpaySignature: checkoutResult.razorpay_signature,
+        razorpayOrderId,
+        razorpayPaymentId,
+        razorpaySignature,
       })
 
-      router.replace({
+      router.push({
         pathname: '/donation-success',
         params: { 
           donationId: donationRes.donationId,

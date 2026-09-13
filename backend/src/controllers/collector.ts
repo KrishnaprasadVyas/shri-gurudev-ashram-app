@@ -27,7 +27,9 @@ export async function applyCollector(request: Request, response: Response, next:
     if (!fullName || !address || !validatePan(panNumber)) throw new HttpError(400, 'Full name, address, and valid PAN are required');
     const user = await DonationUser.findById(userId(request));
     if (!user) throw new HttpError(404, 'User not found');
-    if (user.role !== 'USER' || user.collectorProfile?.status === 'pending') throw new HttpError(400, 'User is not eligible to apply');
+    const isApproved = user.role === 'COLLECTOR_APPROVED' || user.collectorProfile?.status === 'approved';
+    const isPending = user.collectorProfile?.status === 'pending';
+    if (isApproved || isPending) throw new HttpError(400, 'User is not eligible to apply');
     const files = (request as any).files as Express.Multer.File[] | undefined;
     if (!files?.some((file) => file.fieldname === 'aadharFront') || !files.some((file) => file.fieldname === 'aadharBack')) throw new HttpError(400, 'Both Aadhar front and back images are required');
     const dir = getCanonicalKycDir();
