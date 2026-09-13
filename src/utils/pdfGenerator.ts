@@ -120,11 +120,16 @@ export async function generateReceiptHtml(source: ReceiptSourceData): Promise<st
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="viewport" content="width=595, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
       <title>Donation Receipt</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
         
+        @page {
+          margin: 0;
+          size: A4;
+        }
+
         body {
           font-family: 'Times New Roman', Times, serif;
           margin: 0;
@@ -132,7 +137,8 @@ export async function generateReceiptHtml(source: ReceiptSourceData): Promise<st
           background: #fff;
           color: #000;
           width: 595px;
-          max-width: 595px;
+          height: 842px;
+          box-sizing: border-box;
         }
 
         .receipt-container {
@@ -140,7 +146,8 @@ export async function generateReceiptHtml(source: ReceiptSourceData): Promise<st
           border-radius: 20px;
           padding: 20px 20px 40px 20px;
           position: relative;
-          min-height: 800px;
+          height: 100%;
+          box-sizing: border-box;
         }
 
         /* HEADER */
@@ -418,7 +425,11 @@ export async function generateAndShareReceiptPdf(source: ReceiptSourceData) {
     }
 
     const html = await generateReceiptHtml(source)
-    const { uri } = await Print.printToFileAsync({ html })
+    const { uri } = await Print.printToFileAsync({ 
+      html,
+      width: 595,
+      height: 842
+    })
 
     // Determine filename
     let filename = 'Receipt.pdf'
@@ -449,7 +460,11 @@ export async function generateAndShareReceiptPdf(source: ReceiptSourceData) {
 export async function generateAndDownloadReceiptPdf(source: ReceiptSourceData) {
   try {
     const html = await generateReceiptHtml(source)
-    const { uri } = await Print.printToFileAsync({ html })
+    const { uri } = await Print.printToFileAsync({ 
+      html,
+      width: 595,
+      height: 842
+    })
 
     let filename = 'Receipt.pdf'
     if (source.type === 'seva' && source.sevaData) {

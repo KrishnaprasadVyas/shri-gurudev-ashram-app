@@ -56,8 +56,11 @@ export default function StepSponsor({ onNext, onBack: _onBack }: StepSponsorProp
     ? 'Please enter a valid email address.'
     : ''
 
-  const isValid = sponsorName.trim().length >= 2 && isValidPhoneNumber(sponsorPhone) &&
-    (sponsorEmail.trim().length === 0 || isValidEmail(sponsorEmail))
+  const isValid = Boolean(
+    sponsorName?.trim().length >= 2 &&
+    isValidPhoneNumber(sponsorPhone) &&
+    (!sponsorEmail || sponsorEmail.trim().length === 0 || isValidEmail(sponsorEmail))
+  )
 
   const handleContinue = () => {
     setTouched({ name: true, phone: true, email: true })
