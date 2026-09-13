@@ -114,7 +114,7 @@ function ActivityCard({ item, onPress }: { item: ActivityItem; onPress: (item: A
       </View>
       <View style={styles.cardBody}>
         <View style={styles.cardTopRow}>
-          <Text style={styles.cardTitle}>{item.title}</Text>
+          <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
           <View style={[styles.cardStatus, { backgroundColor: `${sColor}14` }]}>
             <Text style={[styles.cardStatusText, { color: sColor }]}>
               {item.status === 'paid' ? 'Confirmed' : item.status}
@@ -489,8 +489,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   cardBody: { flex: 1, gap: 4 },
-  cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  cardTitle: { color: '#2B231B', fontSize: 16, fontWeight: '900' },
+  cardTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
+  cardTitle: { color: '#2B231B', fontSize: 16, fontWeight: '900', flexShrink: 1 },
   cardStatus: {
     borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3,
   },

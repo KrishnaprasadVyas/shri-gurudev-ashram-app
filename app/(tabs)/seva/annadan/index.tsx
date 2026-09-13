@@ -9,7 +9,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useRouter } from 'expo-router'
-import Animated, { FadeInDown } from 'react-native-reanimated'
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSevaStore } from '../../../../src/store/useSevaStore'
 import { fetchSevaPricing } from '../../../../src/services/seva'
@@ -23,6 +23,33 @@ const ANNADAN_STEPS_INFO = [
   { icon: 'favorite', title: 'Your name is honoured', body: 'The Annadan is announced in your name (or your family\'s name) during the day\'s aarti.' },
   { icon: 'volunteer-activism', title: 'Every visitor is fed', body: 'No devotee goes hungry. Your donation ensures everyone receives prasad with Guruji\'s blessings.' },
 ]
+
+function PurposeCard({ opt, onSelect, delay }: { opt: PurposeOption, onSelect: () => void, delay: number }) {
+  const scale = useSharedValue(1)
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }))
+
+  return (
+    <Animated.View entering={FadeInDown.delay(delay).duration(400)} style={animatedStyle}>
+      <Pressable
+        onPressIn={() => scale.value = withSpring(0.96, { damping: 15, stiffness: 300 })}
+        onPressOut={() => scale.value = withSpring(1, { damping: 15, stiffness: 300 })}
+        onPress={onSelect}
+        style={({ pressed }) => [styles.purposeCard, pressed && styles.purposeCardPressed]}
+      >
+        <View style={styles.purposeIcon}>
+          <MaterialIcons name={opt.icon as any} size={24} color="#8B5A00" />
+        </View>
+        <View style={styles.purposeTextWrap}>
+          <Text style={styles.purposeTitle}>{opt.title}</Text>
+          <Text style={styles.purposeDescription}>{opt.description}</Text>
+        </View>
+        <View style={styles.chevronWrap}>
+          <MaterialIcons name="chevron-right" size={24} color="#B9B1A9" />
+        </View>
+      </Pressable>
+    </Animated.View>
+  )
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AnnadanPurposeRoute() {
@@ -94,21 +121,7 @@ export default function AnnadanPurposeRoute() {
         </Animated.View>
 
         {PURPOSE_OPTIONS.map((opt, i) => (
-          <Animated.View key={opt.key} entering={FadeInDown.delay(120 + i * 60).duration(400)}>
-            <Pressable
-              style={({ pressed }) => [styles.purposeCard, pressed && styles.purposeCardPressed]}
-              onPress={() => onSelectPurpose(opt.key)}
-            >
-              <View style={styles.purposeIcon}>
-                <MaterialIcons name={opt.icon as any} size={24} color="#8B5A00" />
-              </View>
-              <View style={styles.purposeTextWrap}>
-                <Text style={styles.purposeTitle}>{opt.title}</Text>
-                <Text style={styles.purposeDescription}>{opt.description}</Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={24} color="#B9B1A9" />
-            </Pressable>
-          </Animated.View>
+          <PurposeCard key={opt.key} opt={opt} onSelect={() => onSelectPurpose(opt.key)} delay={120 + i * 60} />
         ))}
 
         {/* What is Annadan? */}
@@ -194,19 +207,23 @@ const styles = StyleSheet.create({
 
   purposeCard: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: '#fff', borderRadius: 20, padding: 16,
-    borderWidth: 1, borderColor: '#F0E7DD',
-    shadowColor: '#5B4636', shadowOpacity: 0.04, shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 }, elevation: 2,
+    backgroundColor: '#fff', borderRadius: 24, padding: 18,
+    borderWidth: 1.5, borderColor: '#F0E7DD',
+    shadowColor: '#5B4636', shadowOpacity: 0.06, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 }, elevation: 3,
   },
   purposeCardPressed: { backgroundColor: '#FFF9F0', borderColor: '#E8D5BE' },
   purposeIcon: {
-    width: 48, height: 48, borderRadius: 24,
+    width: 52, height: 52, borderRadius: 26,
     backgroundColor: '#FFF0D9', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   purposeTextWrap: { flex: 1, gap: 3 },
-  purposeTitle: { color: '#2B231B', fontSize: 15, fontWeight: '800' },
-  purposeDescription: { color: '#7E7162', fontSize: 12, lineHeight: 18 },
+  purposeTitle: { color: '#2B231B', fontSize: 16, fontWeight: '900' },
+  purposeDescription: { color: '#7E7162', fontSize: 13, lineHeight: 18 },
+  chevronWrap: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#FAF6F0', alignItems: 'center', justifyContent: 'center',
+  },
 
   // Section card
   sectionCard: {

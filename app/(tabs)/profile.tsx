@@ -25,9 +25,9 @@ import type { SevaBooking } from '../../src/types/seva'
 import { useProtectedRoute } from '../../src/hooks/useProtectedRoute'
 
 const SUPPORT_CONFIG = {
-  phone: '+91-XXXXXXXXXX',
-  whatsapp: '+91-XXXXXXXXXX',
-  email: 'support@example.com',
+  phone: '+919158740007',
+  whatsapp: '+919158740007',
+  email: 'info@shrigurudevashram.org',
 }
 
 type MaterialIconName = React.ComponentProps<typeof MaterialIcons>['name']
@@ -133,9 +133,27 @@ export default function ProfileRoute() {
     }
   }
 
-  const openSupportLink = async (url: string) => {
+  const openSupportLink = async (type: 'call' | 'whatsapp' | 'email') => {
     try {
-      await Linking.openURL(url)
+      if (type === 'call') {
+        await Linking.openURL(`tel:${SUPPORT_CONFIG.phone}`)
+      } else if (type === 'whatsapp') {
+        const phone = SUPPORT_CONFIG.whatsapp.replace(/[^\d]/g, '')
+        const appUrl = `whatsapp://send?phone=${phone}`
+        const webUrl = `https://wa.me/${phone}`
+        try {
+          const supported = await Linking.canOpenURL(appUrl)
+          if (supported) {
+            await Linking.openURL(appUrl)
+          } else {
+            await Linking.openURL(webUrl)
+          }
+        } catch {
+          await Linking.openURL(webUrl)
+        }
+      } else if (type === 'email') {
+        await Linking.openURL(`mailto:${SUPPORT_CONFIG.email}`)
+      }
     } catch {
       setErrorMessage('Could not open this support option on your device.')
     }
@@ -283,9 +301,9 @@ export default function ProfileRoute() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Help & Support</Text>
           <View style={styles.settingsCard}>
-            <SettingsRow icon="call-outline" label="Call Support" onPress={() => void openSupportLink(`tel:${SUPPORT_CONFIG.phone}`)} />
-            <SettingsRow icon="logo-whatsapp" label="WhatsApp Support" onPress={() => void openSupportLink(`https://wa.me/${SUPPORT_CONFIG.whatsapp.replace(/[^\d]/g, '')}`)} />
-            <SettingsRow icon="mail-outline" label="Email Support" onPress={() => void openSupportLink(`mailto:${SUPPORT_CONFIG.email}`)} />
+            <SettingsRow icon="call-outline" label="Call Support" onPress={() => void openSupportLink('call')} />
+            <SettingsRow icon="logo-whatsapp" label="WhatsApp Support" onPress={() => void openSupportLink('whatsapp')} />
+            <SettingsRow icon="mail-outline" label="Email Support" onPress={() => void openSupportLink('email')} />
           </View>
         </View>
 
