@@ -130,8 +130,16 @@ async function request(path: string, init: RequestInit = {}) {
       headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error ?? "Request failed");
+    if (!response.ok) throw new Error(body.error ?? body.message ?? "Request could not be processed. Please try again.");
     return body;
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new Error("Connection timed out. Please verify your internet connection and try again.");
+    }
+    if (error?.message?.toLowerCase().includes('network request failed')) {
+      throw new Error("Unable to reach the Ashram servers. Please check your internet connection.");
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -139,16 +147,45 @@ async function request(path: string, init: RequestInit = {}) {
 async function finishFirebaseUser(user: User, forceRefresh = false) {
   const token = await getIdToken(user, forceRefresh);
   await setSecureItem(FIREBASE_TOKEN_KEY, token);
-  const donation = await request("/api/auth/verify-firebase-token", {
-    method: "POST",
-    body: JSON.stringify({ token }),
-  });
-  if (donation?.token)
-    await setSecureItem(DONATION_TOKEN_KEY, donation.token);
-  const profile = await request("/api/users/me", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return mapUser(profile.user);
+  try {
+    const donation = await request("/api/auth/verify-firebase-token", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    });
+    if (donation?.token)
+      await setSecureItem(DONATION_TOKEN_KEY, donation.token);
+  } catch (e) {
+    console.warn("verify-firebase-token warning:", e);
+  }
+
+  let profileUser = null;
+  try {
+    const profile = await request("/api/users/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    profileUser = profile?.user;
+  } catch (error) {
+    if (!forceRefresh) {
+      throw error;
+    }
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const retryProfile = await request("/api/users/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      profileUser = retryProfile?.user;
+    } catch {
+      profileUser = {
+        id: user.uid,
+        phone: user.phoneNumber?.replace(/\D/g, "").slice(-10) || "",
+        full_name: "",
+        role: "user",
+        verification_status: "not_submitted",
+      };
+    }
+  }
+
+  return mapUser(profileUser);
 }
 export async function requestPhoneOtp(
   phone: string,

@@ -7,14 +7,18 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import AppButton from '../../../../src/components/AppButton'
+import AppModal from '../../../../src/components/AppModal'
 import { fetchPackages } from '../../../../src/services/packages'
 import { useBookingDraftStore } from '../../../../src/store/useBookingDraftStore'
+import { useAuthStore } from '../../../../src/store/useAuthStore'
 
 export default function PackageDetailsRoute() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { id } = useLocalSearchParams<{ id: string | string[] }>()
   const packageId = Array.isArray(id) ? id[0] : id
+  const user = useAuthStore((state) => state.user)
+  const [showLoginModal, setShowLoginModal] = React.useState(false)
   const setSelectedPackage = useBookingDraftStore((state) => state.setSelectedPackage)
   const { data = [], isLoading } = useQuery({ queryKey: ['travelPackages'], queryFn: fetchPackages })
   const packageItem = data.find((item) => item.id === packageId)
@@ -99,6 +103,10 @@ export default function PackageDetailsRoute() {
         <Pressable
           onPress={() => {
             setSelectedPackage(packageItem)
+            if (!user) {
+              setShowLoginModal(true)
+              return
+            }
             router.push('/(tabs)/travel/booking' as never)
           }}
         >
@@ -107,6 +115,18 @@ export default function PackageDetailsRoute() {
             <MaterialIcons name="arrow-forward" size={18} color="#fff" />
           </LinearGradient>
         </Pressable>
+
+        <AppModal
+          visible={showLoginModal}
+          title="Sign In Required"
+          description="Please sign in with your mobile number to begin your sacred yatra booking."
+          confirmLabel="Sign In"
+          onConfirm={() => {
+            setShowLoginModal(false)
+            router.push({ pathname: '/(auth)/login', params: { returnTo: '/(tabs)/travel/booking' } } as never)
+          }}
+          onClose={() => setShowLoginModal(false)}
+        />
       </ScrollView>
     </SafeAreaView>
   )

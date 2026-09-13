@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
+  Alert,
+  BackHandler,
   Modal,
   Platform,
   Pressable,
@@ -27,6 +29,7 @@ import { useBookingDraftStore } from '../../store/useBookingDraftStore'
 import { BusType, RoomType, TransportType } from '../../utils/yatraPricing'
 import { isNonEmptyString, isValidPhoneNumber, normalizeDigits, isValidAadhaarNumber } from '../../utils/validation'
 import ImageUploadWidget from '../../components/ImageUploadWidget'
+import AppModal from '../../components/AppModal'
 import { fetchSevaMonthlyAvailability } from '../../services/seva'
 import api from '../../api/axiosClient'
 
@@ -479,10 +482,43 @@ export default function BookingForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [showLoginModal, setShowLoginModal] = useState(false)
   const currentUser = useAuthStore((state) => state.user)
   const updatePassengerField = useBookingDraftStore((state) => state.updatePassengerField)
   const scrollViewRef = React.useRef<ScrollView>(null)
   const bottomPadding = useTabBarBottomPadding(32)
+
+  const handleBackWithWarning = React.useCallback(() => {
+    const draft = useBookingDraftStore.getState()
+    const p1 = draft.passengers?.[0]
+    const hasData = p1?.fullName || p1?.phone || p1?.address || stepIndex > 0
+    if (hasData) {
+      Alert.alert(
+        'Discard Booking?',
+        'You have unsaved booking details. Are you sure you want to leave this page?',
+        [
+          { text: 'Keep Editing', style: 'cancel' },
+          {
+            text: 'Discard & Leave',
+            style: 'destructive',
+            onPress: () => {
+              useBookingDraftStore.getState().resetDraft()
+              router.back()
+            },
+          },
+        ]
+      )
+      return true
+    }
+    router.back()
+    return true
+  }, [router, stepIndex])
+
+  useEffect(() => {
+    const onBackPress = () => handleBackWithWarning()
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress)
+    return () => subscription.remove()
+  }, [handleBackWithWarning])
 
   const transportType = transportTypeState || 'Flight'
   const busType = busTypeState || 'AC Train'
@@ -582,7 +618,7 @@ export default function BookingForm() {
     const refreshedUser = await refreshCurrentUser()
 
     if (!refreshedUser) {
-      setErrorMessage('Please sign in again to continue.')
+      setShowLoginModal(true)
       return
     }
 
@@ -679,7 +715,7 @@ export default function BookingForm() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <TouchableOpacity onPress={handleBackWithWarning} style={styles.backButton}>
               <Ionicons name="chevron-back" size={20} color={COLORS.primaryDark} />
             </TouchableOpacity>
             <View style={styles.headerCopy}>
@@ -1035,6 +1071,17 @@ export default function BookingForm() {
           />
         )
       ) : null}
+      <AppModal
+        visible={showLoginModal}
+        title="Sign In Required"
+        description="Please sign in with your mobile number to complete your yatra booking."
+        confirmLabel="Sign In"
+        onConfirm={() => {
+          setShowLoginModal(false)
+          router.push({ pathname: '/(auth)/login', params: { returnTo: '/(tabs)/travel/booking' } } as never)
+        }}
+        onClose={() => setShowLoginModal(false)}
+      />
     </SafeAreaView>
   )
 }

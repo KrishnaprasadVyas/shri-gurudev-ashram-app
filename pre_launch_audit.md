@@ -32,7 +32,7 @@ The most critical issues are:
 **Confidence:** High
 
 **Why it is a problem:**  
-[.env.development](file:///c:/Users/abuna/Desktop/proj/shri-gurudev-ashram-app/backend/.env.development) contains live Supabase service role key, Razorpay API keys, MongoDB credentials (with plaintext password `ashram123`), and a Firebase service account JSON file path. The `.gitignore` has `.env.*` which *should* exclude these, but the file physically exists on disk and may have been committed before the gitignore was added. The [firebase-service-account.json](file:///c:/Users/abuna/Desktop/proj/shri-gurudev-ashram-app/backend/firebase-service-account.json) file (2.4KB) is NOT in `.gitignore` and is committed.
+[.env.development](file:///c:/Users/abuna/Desktop/proj/shri-gurudev-ashram-app/backend/.env.development) contains live Supabase service role key, Razorpay API keys, MongoDB credentials (with plaintext password `[REDACTED]`), and a Firebase service account JSON file path. The `.gitignore` has `.env.*` which *should* exclude these, but the file physically exists on disk and may have been committed before the gitignore was added. The [firebase-service-account.json](file:///c:/Users/abuna/Desktop/proj/shri-gurudev-ashram-app/backend/firebase-service-account.json) file (2.4KB) is NOT in `.gitignore` and is committed.
 
 **Files involved:**
 - [backend/.env.development](file:///c:/Users/abuna/Desktop/proj/shri-gurudev-ashram-app/backend/.env.development)

@@ -26,6 +26,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="my-sevas" options={{ href: null }} />
       <Tabs.Screen name="seva-payment" options={{ href: null }} />
       <Tabs.Screen name="seva-success" options={{ href: null }} />
+      <Tabs.Screen name="donation-success" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -54,9 +54,18 @@ export async function requireAuth(request: Request, _response: Response, next: N
       .from('users')
       .insert({ id: randomUUID(), phone, full_name: '' })
       .select('id')
-      .single()
+      .maybeSingle()
 
     if (created.error || !created.data) {
+      // Fall back to check if user already exists or was created concurrently
+      const retryProfile = await supabaseAdmin.from('users').select('id, deleted_at').eq('phone', phone).maybeSingle()
+      if (retryProfile.data) {
+        if (retryProfile.data.deleted_at) {
+          await supabaseAdmin.from('users').update({ deleted_at: null }).eq('id', retryProfile.data.id)
+        }
+        ;(request as AuthenticatedRequest).userId = retryProfile.data.id
+        return next()
+      }
       throw new HttpError(500, created.error?.message ?? 'Could not create travel user profile')
     }
 

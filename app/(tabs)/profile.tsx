@@ -60,9 +60,13 @@ export default function ProfileRoute() {
   const [errorMessage, setErrorMessage] = React.useState('')
   const [collectorStatus, setCollectorStatus] = React.useState<any>(null)
 
-  useProtectedRoute()
-
   const loadProfile = React.useCallback(async (isRefresh = false) => {
+    if (!storeUser) {
+      setIsLoading(false)
+      setIsRefreshing(false)
+      return
+    }
+
     if (isRefresh) {
       setIsRefreshing(true)
     } else {
@@ -86,7 +90,7 @@ export default function ProfileRoute() {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [])
+  }, [storeUser])
 
   useFocusEffect(
     React.useCallback(() => {
@@ -148,7 +152,54 @@ export default function ProfileRoute() {
     verificationStatus: storeUser?.verificationStatus ?? 'not_submitted',
   }
 
-  if (!isHydrated || !storeUser) return null
+  if (!isHydrated) return null
+
+  if (!storeUser) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.content, { paddingTop: 24, paddingBottom: 48 }]}
+        >
+          <View style={styles.header}>
+            <View style={styles.avatarPlaceholder}>
+              <MaterialIcons name="person" size={28} color="#993D00" />
+            </View>
+            <View style={styles.headerCopy}>
+              <Text style={styles.greeting}>Jai Gurudev</Text>
+              <Text style={styles.name}>Welcome, Devotee</Text>
+            </View>
+          </View>
+
+          <LinearGradient colors={['#ffffff', '#FCFAF6']} style={[styles.profileCard, { padding: 22, alignItems: 'center' }]}>
+            <MaterialIcons name="lock-outline" size={38} color="#E65C00" style={{ marginBottom: 10 }} />
+            <Text style={[styles.sectionTitle, { textAlign: 'center', marginBottom: 6 }]}>Sign in to your account</Text>
+            <Text style={{ textAlign: 'center', color: '#7E7162', marginBottom: 20, fontSize: 14, lineHeight: 20 }}>
+              Sign in with your mobile number to view your bookings, manage sevas, access donation receipts, and view your profile.
+            </Text>
+            <Pressable
+              onPress={() => router.push({ pathname: '/(auth)/login', params: { returnTo: '/(tabs)/profile' } } as never)}
+              style={({ pressed }) => [{ width: '100%', borderRadius: 999, overflow: 'hidden', opacity: pressed ? 0.9 : 1 }]}
+            >
+              <LinearGradient colors={['#7B4B00', '#B97512', '#E0A31F']} style={{ minHeight: 48, borderRadius: 999, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
+                <MaterialIcons name="login" size={20} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800' }}>Sign In / Register</Text>
+              </LinearGradient>
+            </Pressable>
+          </LinearGradient>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Help & Support</Text>
+            <View style={styles.settingsCard}>
+              <SettingsRow icon="call-outline" label="Call Support" onPress={() => void openSupportLink(`tel:${SUPPORT_CONFIG.phone}`)} />
+              <SettingsRow icon="logo-whatsapp" label="WhatsApp Support" onPress={() => void openSupportLink(`https://wa.me/${SUPPORT_CONFIG.whatsapp.replace(/[^\d]/g, '')}`)} />
+              <SettingsRow icon="mail-outline" label="Email Support" onPress={() => void openSupportLink(`mailto:${SUPPORT_CONFIG.email}`)} />
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    )
+  }
 
   return (
     <SafeAreaView style={styles.container}>

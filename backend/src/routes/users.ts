@@ -16,8 +16,9 @@ usersRouter.get("/me", requireAuth, async (request, response, next) => {
       .from("users")
       .select("*")
       .eq("id", (request as AuthenticatedRequest).userId)
-      .single();
-    if (error || !data) throw new HttpError(404, "User profile not found");
+      .maybeSingle();
+    if (error) throw new HttpError(500, error.message);
+    if (!data) throw new HttpError(404, "User profile not found");
     response.json({ user: data });
   } catch (error) {
     next(error);
@@ -58,7 +59,7 @@ usersRouter.delete("/me", requireAuth, async (request, response, next) => {
   try {
     const { error } = await supabaseAdmin
       .from("users")
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: new Date().toISOString(), full_name: '' })
       .eq("id", (request as AuthenticatedRequest).userId);
 
     if (error) throw new HttpError(400, error.message);
@@ -220,7 +221,8 @@ usersRouter.get(
       if (!rawPath) throw new HttpError(400, "Document path parameter is required");
 
       const baseDir = path.resolve(process.cwd(), "uploads", "verifications");
-      const targetPath = path.resolve(process.cwd(), rawPath);
+      const normalizedPath = rawPath.replace(/^[/\\]+/, "");
+      const targetPath = path.resolve(process.cwd(), normalizedPath);
 
       // Prevent path traversal
       if (!targetPath.startsWith(baseDir)) {

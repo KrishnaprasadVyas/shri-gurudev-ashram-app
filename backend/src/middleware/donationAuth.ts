@@ -15,8 +15,11 @@ export async function optionalDonationAuth(request: Request, _response: Response
   if (!token) return next()
   try {
     const decoded = jwt.verify(token, secret()) as { userId?: string; role?: string }
-    if (decoded.userId && await DonationUser.exists({ _id: decoded.userId })) {
-      ;(request as DonationRequest).donationUser = { id: decoded.userId, role: decoded.role ?? 'USER' }
+    if (decoded.userId) {
+      const user = await DonationUser.findById(decoded.userId).select('role collectorDisabled').lean()
+      if (user && !user.collectorDisabled) {
+        ;(request as DonationRequest).donationUser = { id: decoded.userId, role: user.role ?? 'USER' }
+      }
     }
   } catch { /* optional authentication intentionally falls back to guest */ }
   next()
@@ -27,8 +30,11 @@ export async function requireDonationAuth(request: Request, _response: Response,
     const token = request.headers.authorization?.replace(/^Bearer\s+/i, '')
     if (!token) throw new HttpError(401, 'Missing authorization token')
     const decoded = jwt.verify(token, secret()) as { userId?: string; role?: string }
-    if (!decoded.userId || !(await DonationUser.exists({ _id: decoded.userId }))) throw new HttpError(401, 'Invalid authorization token')
-    ;(request as DonationRequest).donationUser = { id: decoded.userId, role: decoded.role ?? 'USER' }
+    if (!decoded.userId) throw new HttpError(401, 'Invalid authorization token')
+    const user = await DonationUser.findById(decoded.userId).select('role collectorDisabled').lean()
+    if (!user) throw new HttpError(401, 'Invalid authorization token')
+    if (user.collectorDisabled) throw new HttpError(403, 'Collector account has been disabled')
+    ;(request as DonationRequest).donationUser = { id: decoded.userId, role: user.role ?? 'USER' }
     next()
   } catch (error) { next(error) }
 }

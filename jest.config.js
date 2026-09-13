@@ -7,10 +7,8 @@ module.exports = {
       'react-native' +
       '|@react-native' +
       '|@react-navigation' +
-      '|expo' +
-      '|@expo' +
-      '|expo-router' +
-      '|expo-modules-core' +
+      '|expo.*' +
+      '|@expo.*' +
       '|@unimodules' +
       '|react-native-svg' +
       '|react-native-reanimated' +
@@ -18,8 +16,14 @@ module.exports = {
       '|react-native-screens' +
       '|react-native-safe-area-context' +
       '|react-native-url-polyfill' +
+      '|react-native-css-interop' +
+      '|nativewind' +
       '|zustand' +
       ')/)',
+  ],
+  testPathIgnorePatterns: [
+    '<rootDir>/backend/',
+    '<rootDir>/node_modules/',
   ],
   // Coverage targets — smoke coverage for T14 four critical paths
   collectCoverageFrom: [
@@ -34,7 +38,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   testMatch: [
-    '**/__tests__/**/*.test.ts',
-    '**/__tests__/**/*.test.tsx',
+    '<rootDir>/src/**/__tests__/**/*.test.ts',
+    '<rootDir>/src/**/__tests__/**/*.test.tsx',
   ],
 }

@@ -34,6 +34,13 @@ export async function generateReceipt(donation: any) {
   return filePath
 }
 
-export function publicReceiptUrl(filePath: string) {
-  return `/receipts/${path.basename(filePath)}`
+export function publicReceiptUrl(filePath: string, donation?: any) {
+  if (donation?._id && donation?.receiptToken) {
+    return `/api/donations/${donation._id}/receipt?token=${donation.receiptToken}`
+  }
+  if (donation?._id) {
+    return `/api/donations/${donation._id}/receipt`
+  }
+  const idFromFilename = path.basename(filePath, '.pdf').replace('receipt_', '')
+  return `/api/donations/${idFromFilename}/receipt`
 }

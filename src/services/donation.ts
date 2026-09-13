@@ -1,4 +1,8 @@
 import donationApi from '../api/donationAxiosClient'
+import * as FileSystem from 'expo-file-system/legacy'
+import * as Sharing from 'expo-sharing'
+import { Alert, Linking, Platform } from 'react-native'
+import { getDonationToken } from './auth'
 
 export const getDonationHeads = async () => {
   try {
@@ -52,16 +56,12 @@ export const getCollectorDashboard = async () => {
 }
 
 export const applyCollector = async (body: FormData) => {
-  const { data } = await donationApi.post('/api/collector/apply', body, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const { data } = await donationApi.post('/api/collector/apply', body)
   return data
 }
 
 export const reapplyCollector = async (body: FormData) => {
-  const { data } = await donationApi.post('/api/collector/reapply', body, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const { data } = await donationApi.post('/api/collector/reapply', body)
   return data
 }
 
@@ -100,3 +100,81 @@ export const getTopDonors = async () => {
     return []
   }
 }
+
+export const downloadDonationReceipt = async (params: {
+  donationId: string
+  receiptUrl?: string
+  receiptNumber?: string
+  receiptToken?: string
+}) => {
+  const { donationId, receiptUrl, receiptNumber, receiptToken } = params
+  try {
+    const baseUrl = donationApi.defaults.baseURL || ''
+    let fullUrl = ''
+
+    if (receiptUrl && (receiptUrl.startsWith('http://') || receiptUrl.startsWith('https://'))) {
+      fullUrl = receiptUrl
+    } else if (receiptUrl && receiptUrl.startsWith('/')) {
+      fullUrl = `${baseUrl}${receiptUrl}`
+    } else {
+      fullUrl = `${baseUrl}/api/donations/${donationId}/receipt${receiptToken ? `?token=${receiptToken}` : ''}`
+    }
+
+    if (Platform.OS === 'web') {
+      await Linking.openURL(fullUrl)
+      return
+    }
+
+    const token = await getDonationToken()
+    const filename = `Donation_Receipt_${receiptNumber || donationId}.pdf`
+    const targetUri = `${FileSystem.cacheDirectory}${filename}`
+
+    const headers: Record<string, string> = {}
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
+    const downloadRes = await FileSystem.downloadAsync(fullUrl, targetUri, { headers })
+
+    if (downloadRes.status !== 200) {
+      Alert.alert('Receipt Pending', 'Your 80G tax receipt is being generated. Please refresh in a moment.')
+      return
+    }
+
+    const isAvailable = await Sharing.isAvailableAsync()
+    if (isAvailable) {
+      await Sharing.shareAsync(downloadRes.uri, {
+        UTI: 'com.adobe.pdf',
+        mimeType: 'application/pdf',
+        dialogTitle: 'Ashram Donation Receipt',
+      })
+    } else {
+      Alert.alert('Success', `Receipt saved to device cache as ${filename}`)
+    }
+  } catch (error) {
+    console.error('Error downloading receipt:', error)
+    Alert.alert('Download Error', 'Unable to download receipt at this time. Please check your connection and try again.')
+  }
+}
+
+export const collectCashDonation = async (body: {
+  donor: {
+    name: string
+    mobile: string
+    idNumber: string
+    address?: string
+    anonymousDisplay?: boolean
+  }
+  donationHead: {
+    id?: string
+    key?: string
+    name?: string
+  }
+  amount: number
+  notes?: string
+}) => {
+  const { data } = await donationApi.post('/api/collector/collect-cash', body)
+  return data
+}
+
+

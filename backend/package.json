@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "start": "tsx --env-file=.env ./src/server.ts",
-    "dev": "tsx watch --env-file=.env ./src/server.ts"
+    "dev": "tsx watch --env-file=.env ./src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --env-file=.env ../node_modules/jest/bin/jest.js"
   },
   "dependencies": {
     "@react-native-firebase/app": "^25.1.0",

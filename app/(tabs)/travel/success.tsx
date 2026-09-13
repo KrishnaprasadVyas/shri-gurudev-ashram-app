@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, Alert, Platform } from 'react-native'
+import { ActivityIndicator, BackHandler, Pressable, ScrollView, StyleSheet, Text, View, Alert, Platform } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -31,6 +31,15 @@ export default function SuccessRoute() {
       .catch(() => setBooking(null))
       .finally(() => setIsLoading(false))
   }, [bookingId])
+
+  React.useEffect(() => {
+    const onBackPress = () => {
+      router.replace('/(tabs)/home' as never)
+      return true
+    }
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress)
+    return () => subscription.remove()
+  }, [router])
 
   const receiptData: TravelReceiptData | null = booking
     ? {

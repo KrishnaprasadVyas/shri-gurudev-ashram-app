@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -50,6 +51,36 @@ export default function VerifyIdentityRoute() {
   const verificationStatus = user?.verificationStatus ?? 'not_submitted'
   const canSubmitForm = verificationStatus === 'not_submitted' || verificationStatus === 'rejected'
   const hasSubmittedState = verificationStatus === 'submitted' || verificationStatus === 'verified'
+
+  const handleBackWithWarning = useCallback(() => {
+    const hasUnsavedData =
+      Boolean(temporaryAadhaarUri) ||
+      Boolean(temporarySelfieUri) ||
+      Boolean(aadhaarNumber && aadhaarNumber !== (user?.aadhaarNumber || ''))
+
+    if (hasUnsavedData) {
+      Alert.alert(
+        'Discard Verification?',
+        'You have unsaved verification details or uploaded documents. Are you sure you want to leave this page?',
+        [
+          { text: 'Keep Editing', style: 'cancel' },
+          {
+            text: 'Discard & Leave',
+            style: 'destructive',
+            onPress: () => router.back(),
+          },
+        ]
+      )
+      return true
+    }
+    router.back()
+    return true
+  }, [temporaryAadhaarUri, temporarySelfieUri, aadhaarNumber, user?.aadhaarNumber, router])
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', handleBackWithWarning)
+    return () => subscription.remove()
+  }, [handleBackWithWarning])
 
   useEffect(() => {
     void syncCurrentUser()
@@ -212,7 +243,7 @@ export default function VerifyIdentityRoute() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Header onBack={() => router.back()} disabled={isSubmitting} />
+          <Header onBack={handleBackWithWarning} disabled={isSubmitting} />
 
           {verificationStatus === 'rejected' ? <StatusCard verificationStatus={verificationStatus} /> : null}
 
