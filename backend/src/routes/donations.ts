@@ -7,14 +7,15 @@ import rateLimit from 'express-rate-limit'
 
 export const donationsRouter = Router()
 
-const createLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false })
-const statusLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false })
+const isDev = process.env.NODE_ENV !== 'production'
+const createLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: isDev ? 1000 : 30, standardHeaders: true, legacyHeaders: false })
+const statusLimiter = rateLimit({ windowMs: 60 * 1000, max: isDev ? 1000 : 30, standardHeaders: true, legacyHeaders: false })
 
 donationsRouter.post('/create', createLimiter, optionalDonationAuth, createDonation)
 donationsRouter.post('/create-order', createLimiter, optionalDonationAuth, createDonationOrder)
 donationsRouter.post('/verify-payment', createLimiter, optionalDonationAuth, verifyDonationPayment)
-donationsRouter.get('/:id/status', statusLimiter, donationStatus)
-donationsRouter.get('/:id/receipt', statusLimiter, donationReceipt)
+donationsRouter.get('/:id/status', statusLimiter, optionalDonationAuth, donationStatus)
+donationsRouter.get('/:id/receipt', statusLimiter, optionalDonationAuth, donationReceipt)
 donationsRouter.get('/me/last-profile', requireDonationAuth, lastProfile)
 donationsRouter.get('/history', requireDonationAuth, userDonations)
 donationsRouter.get('/leaderboard', leaderboard)

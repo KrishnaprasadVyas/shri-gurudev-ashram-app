@@ -1,16 +1,46 @@
+import crypto from 'crypto'
+import fs from 'fs'
+import path from 'path'
 import { Router } from 'express'
 import { Donation } from '../models/donation'
 import { DonationHead } from '../models/donationHead'
 import { DonationUser } from '../models/user'
 import { requireDonationAuth, DonationRequest } from '../middleware/donationAuth'
 import { HttpError } from '../errors'
+import { generateReceipt, publicReceiptUrl } from '../services/donationReceipt'
+import { getCanonicalKycDir } from '../controllers/collector'
 
 function admin(request: DonationRequest) { if (!['SYSTEM_ADMIN', 'WEBSITE_ADMIN'].includes(request.donationUser?.role ?? '')) throw new HttpError(403, 'Administrator access required') }
 export const donationAdminRouter = Router()
 donationAdminRouter.use(requireDonationAuth)
 donationAdminRouter.get('/donations', async (request, response, next) => { try { admin(request as DonationRequest); const data = await Donation.find().sort({ createdAt: -1 }).limit(100).lean(); response.json({ donations: data }) } catch (error) { next(error) } })
-donationAdminRouter.post('/donations/cash', async (request, response, next) => { try { admin(request as DonationRequest); const { donor, donationHead, amount, paymentMethod, transactionRef } = request.body ?? {}; const donation = await Donation.create({ donor, donationHead, amount, paymentMethod: paymentMethod ?? 'CASH', status: 'SUCCESS', transactionRef, addedBy: (request as DonationRequest).donationUser!.id }); response.status(201).json({ donation }) } catch (error) { next(error) } })
-donationAdminRouter.post('/donations/offline', async (request, response, next) => { try { admin(request as DonationRequest); const { donor, donationHead, amount, paymentMethod, transactionRef } = request.body ?? {}; const donation = await Donation.create({ donor, donationHead, amount, paymentMethod: paymentMethod ?? 'CASH', status: 'SUCCESS', transactionRef, addedBy: (request as DonationRequest).donationUser!.id }); response.status(201).json({ donation }) } catch (error) { next(error) } })
+
+async function createAdminOfflineDonation(request: any, response: any, next: any) {
+  try {
+    admin(request as DonationRequest)
+    const { donor, donationHead, amount, paymentMethod, transactionRef } = request.body ?? {}
+    const receiptToken = crypto.randomBytes(32).toString('hex')
+    const receiptNumber = `GRD-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`
+    const donation = await Donation.create({
+      donor,
+      donationHead,
+      amount,
+      paymentMethod: paymentMethod ?? 'CASH',
+      status: 'SUCCESS',
+      transactionRef: transactionRef || `ADMIN-OFFLINE-${Date.now()}`,
+      receiptNumber,
+      receiptToken,
+      addedBy: (request as DonationRequest).donationUser!.id,
+    })
+    const filePath = await generateReceipt(donation)
+    donation.receiptUrl = publicReceiptUrl(filePath, donation)
+    await donation.save()
+    response.status(201).json({ donation })
+  } catch (error) { next(error) }
+}
+
+donationAdminRouter.post('/donations/cash', createAdminOfflineDonation)
+donationAdminRouter.post('/donations/offline', createAdminOfflineDonation)
 donationAdminRouter.get('/collectors', async (request, response, next) => { try { admin(request as DonationRequest); response.json({ collectors: await DonationUser.find({ referralCode: { $ne: null } }).select('-emailVerificationToken -emailVerificationExpiry').lean() }) } catch (error) { next(error) } })
 donationAdminRouter.get('/collectors/summary', async (request, response, next) => { try { admin(request as DonationRequest); response.json({ collectors: await DonationUser.countDocuments({ referralCode: { $ne: null } }), approved: await DonationUser.countDocuments({ role: 'COLLECTOR_APPROVED' }) }) } catch (error) { next(error) } })
 donationAdminRouter.get('/collectors/:id', async (request, response, next) => { try { admin(request as DonationRequest); const user = await DonationUser.findById(request.params.id).select('-emailVerificationToken -emailVerificationExpiry'); if (!user) throw new HttpError(404, 'Collector not found'); response.json({ collector: user }) } catch (error) { next(error) } })
@@ -19,6 +49,15 @@ donationAdminRouter.get('/collector-applications', async (request, response, nex
 donationAdminRouter.post('/collector/:userId/approve', async (request, response, next) => { try { admin(request as DonationRequest); const user = await DonationUser.findByIdAndUpdate(request.params.userId, { role: 'COLLECTOR_APPROVED', 'collectorProfile.status': 'approved', 'collectorProfile.approvedAt': new Date() }, { new: true }); response.json({ success: true, user }) } catch (error) { next(error) } })
 donationAdminRouter.post('/collector/:userId/reject', async (request, response, next) => { try { admin(request as DonationRequest); const user = await DonationUser.findByIdAndUpdate(request.params.userId, { role: 'USER', 'collectorProfile.status': 'rejected', 'collectorProfile.rejectedReason': request.body?.reason ?? 'Rejected' }, { new: true }); response.json({ success: true, user }) } catch (error) { next(error) } })
 donationAdminRouter.post('/collector/:userId/revoke', async (request, response, next) => { try { admin(request as DonationRequest); const user = await DonationUser.findByIdAndUpdate(request.params.userId, { role: 'USER', 'collectorProfile.status': 'rejected' }, { new: true }); response.json({ success: true, user }) } catch (error) { next(error) } })
+donationAdminRouter.get('/collector-kyc/:fileKey', async (request, response, next) => {
+  try {
+    admin(request as DonationRequest)
+    const fileKey = path.basename(request.params.fileKey)
+    const filePath = path.join(getCanonicalKycDir(), fileKey)
+    if (!fs.existsSync(filePath)) throw new HttpError(404, 'KYC document not found')
+    response.sendFile(filePath)
+  } catch (error) { next(error) }
+})
 
 export const donationHeadAdminRouter = Router()
 donationHeadAdminRouter.use(requireDonationAuth)

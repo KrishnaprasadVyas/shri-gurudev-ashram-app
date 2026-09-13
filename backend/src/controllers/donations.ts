@@ -5,6 +5,7 @@ import { Types } from 'mongoose'
 import { Request, Response, NextFunction } from 'express'
 import { Donation } from '../models/donation'
 import { DonationHead } from '../models/donationHead'
+import { DonationUser } from '../models/user'
 import { DonationRequest } from '../middleware/donationAuth'
 import { HttpError } from '../errors'
 import { razorpay } from '../services/razorpay'
@@ -70,7 +71,6 @@ export async function createDonation(request: Request, response: Response, next:
 }
 
 async function resolveReferral(code: string) {
-  const { DonationUser } = await import('../models/user')
   const collector = await DonationUser.findOne({ referralCode: code.toUpperCase(), collectorDisabled: { $ne: true } }).lean()
   if (!collector) throw new HttpError(400, 'Invalid or inactive referral code')
   return { collectorId: collector._id, collectorName: collector.fullName, hasCollectorAttribution: true }
@@ -138,7 +138,7 @@ export async function verifyDonationPayment(request: Request, response: Response
       donation.receiptNumber = `GRD-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`
     }
     const filePath = await generateReceipt(donation)
-    donation.receiptUrl = publicReceiptUrl(filePath)
+    donation.receiptUrl = publicReceiptUrl(filePath, donation)
     await donation.save()
 
     response.json({
@@ -186,7 +186,7 @@ export async function donationReceipt(request: Request, response: Response, next
       await donation.save()
     }
     const filePath = await generateReceipt(donation)
-    donation.receiptUrl = publicReceiptUrl(filePath)
+    donation.receiptUrl = publicReceiptUrl(filePath, donation)
     await donation.save()
     response.setHeader('Content-Type', 'application/pdf')
     response.setHeader('Content-Disposition', `attachment; filename="receipt-${donation.receiptNumber}.pdf"`)

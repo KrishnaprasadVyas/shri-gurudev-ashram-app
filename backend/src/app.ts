@@ -18,6 +18,8 @@ import { donationsRouter } from './routes/donations'
 import { donationPublicRouter } from './routes/donationPublic'
 import { donationAuthRouter } from './routes/donationAuth'
 import { collectorRouter } from './routes/collector'
+import { leaderboard } from './controllers/collector'
+import { userDonations } from './controllers/donations'
 import { donationAdminRouter, donationHeadAdminRouter } from './routes/donationAdmin'
 import { sevaPackagesPublicRouter } from './routes/sevaPackagesPublic'
 import { sevaPackagesAdminRouter } from './routes/sevaPackagesAdmin'
@@ -40,7 +42,7 @@ app.set('trust proxy', 1)
 
 app.use(helmet())
 app.use(cors({
-  origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : ['https://shrigurudevashram.org', 'https://donate.shrigurudevashram.org'],
+  origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map((s) => s.trim()) : ['https://shrigurudevashram.org', 'https://donate.shrigurudevashram.org', 'https://mavt.in', 'https://api.mavt.in'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'],
 }))
@@ -106,27 +108,17 @@ app.get('/api/referral/validate/:code', async (request, response, next) => {
     response.json(user ? { valid: true, collectorId: user._id, collectorName: user.fullName ?? user.collectorProfile?.fullName } : { valid: false, error: 'Invalid or inactive referral code' })
   } catch (error) { next(error) }
 })
-app.get('/api/leaderboard/top', async (request, response, next) => {
-  try {
-    const { leaderboard } = await import('./controllers/collector')
-    await leaderboard(request, response, next)
-  } catch (error) { next(error) }
-})
+app.get('/api/leaderboard/top', leaderboard)
 app.use('/api/admin/system', adminLimiter, donationAdminRouter)
 app.use('/api/admin/seva-packages', adminLimiter, sevaPackagesAdminRouter)
 app.use('/api/admin/website/donation-heads', adminLimiter, donationHeadAdminRouter)
-app.get('/api/user/donations', requireDonationAuth, async (request, response, next) => {
-  try {
-    const { userDonations } = await import('./controllers/donations')
-    await userDonations(request, response, next)
-  } catch (error) { next(error) }
-})
+app.get('/api/user/donations', requireDonationAuth, userDonations)
 const canonicalReceiptDir = path.resolve(
   path.basename(process.cwd()) === 'backend' ? process.cwd() : path.join(process.cwd(), 'backend'),
   'receipts'
 )
 fs.mkdirSync(canonicalReceiptDir, { recursive: true })
-app.use('/receipts', express.static(canonicalReceiptDir))
+// Receipts are securely served via GET /api/donations/:id/receipt with token/ownership verification
 const profileUploadsDir = path.resolve(
   path.basename(process.cwd()) === 'backend' ? process.cwd() : path.join(process.cwd(), 'backend'),
   'uploads',

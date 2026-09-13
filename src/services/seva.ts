@@ -3,7 +3,6 @@ import type { CreateSevaBookingInput, SevaBooking, UpcomingSeva } from '../types
 import { useSevaStore } from '../store/useSevaStore';
 
 import api from '../api/axiosClient';
-import donationApi from '../api/donationAxiosClient';
 
 // Helper to replace Promise.allSettled which is not available in all React Native JS engines
 async function allSettled<T>(promises: Promise<T>[]) {
@@ -139,7 +138,7 @@ export async function fetchUpcomingSevas(): Promise<UpcomingSeva[]> {
 // ─── Seva History (Merging Nitya Annadan + Yajman Only) ──────────────────────
 export async function fetchSevaHistory(): Promise<SevaBooking[]> {
   const [annadanRes, yajmanRes] = await allSettled([
-    donationApi.get('/api/annadan/history').catch(() => ({ data: [] })),
+    api.get('/api/annadan/history').catch(() => ({ data: [] })),
     api.get('/api/seva/history').catch(() => ({ data: [] })),
   ]);
 

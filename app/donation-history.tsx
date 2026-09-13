@@ -15,7 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
-import { getDonationHistory } from '../src/services/donation'
+import { getDonationHistory, downloadDonationReceipt } from '../src/services/donation'
 import { formatDateIST } from '../src/utils/date'
 
 const C = {
@@ -82,13 +82,19 @@ export default function DonationHistoryScreen() {
     return matchesSearch && matchesFilter
   })
 
-  const handleDownloadReceipt = (item: DonationItem) => {
-    if (item.receiptUrl) {
-      Linking.openURL(item.receiptUrl).catch(() => {
-        Alert.alert('Error', 'Unable to open receipt URL.')
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
+  const handleDownloadReceipt = async (item: DonationItem) => {
+    if (downloadingId) return
+    setDownloadingId(item._id)
+    try {
+      await downloadDonationReceipt({
+        donationId: item._id,
+        receiptUrl: item.receiptUrl,
+        receiptNumber: item.receiptNumber,
       })
-    } else {
-      Alert.alert('Receipt Pending', 'Receipt generation in progress. Please refresh in a moment.')
+    } finally {
+      setDownloadingId(null)
     }
   }
 
@@ -213,9 +219,19 @@ export default function DonationHistoryScreen() {
                 </View>
 
                 {item.status === 'SUCCESS' ? (
-                  <Pressable style={styles.receiptBtn} onPress={() => handleDownloadReceipt(item)}>
-                    <MaterialIcons name="receipt" size={16} color={C.orange} />
-                    <Text style={styles.receiptBtnText}>80G Receipt</Text>
+                  <Pressable
+                    style={[styles.receiptBtn, downloadingId === item._id && { opacity: 0.7 }]}
+                    onPress={() => handleDownloadReceipt(item)}
+                    disabled={downloadingId === item._id}
+                  >
+                    {downloadingId === item._id ? (
+                      <ActivityIndicator size="small" color={C.orange} />
+                    ) : (
+                      <>
+                        <MaterialIcons name="receipt" size={16} color={C.orange} />
+                        <Text style={styles.receiptBtnText}>80G Receipt</Text>
+                      </>
+                    )}
                   </Pressable>
                 ) : null}
               </View>

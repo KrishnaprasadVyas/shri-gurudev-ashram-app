@@ -1,5 +1,19 @@
 import React, { useEffect, useState } from 'react'
-import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { MaterialIcons } from '@expo/vector-icons'
@@ -7,8 +21,17 @@ import { useRouter } from 'expo-router'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import CollectorIDCard from '../src/components/CollectorIDCard'
 import { useAuthStore } from '../src/store/useAuthStore'
-import { getCollectorDashboard, getCollectorStatus, getLeaderboard } from '../src/services/donation'
+import {
+  collectCashDonation,
+  downloadDonationReceipt,
+  getCollectorDashboard,
+  getCollectorStatus,
+  getDonationHeads,
+  getLeaderboard,
+} from '../src/services/donation'
 import { useProtectedRoute } from '../src/hooks/useProtectedRoute'
+import { getFriendlyApiError } from '../src/utils/apiErrors'
+import AppInput from '../src/components/AppInput'
 
 export default function CollectorDashboardRoute() {
   const router = useRouter()
@@ -18,15 +41,146 @@ export default function CollectorDashboardRoute() {
   useProtectedRoute()
 
   const [showIDCard, setShowIDCard] = useState(false)
+  const [showCashModal, setShowCashModal] = useState(false)
+  const [isSubmittingCash, setIsSubmittingCash] = useState(false)
+  const [causes, setCauses] = useState<any[]>([])
+
+  const [donorName, setDonorName] = useState('')
+  const [donorMobile, setDonorMobile] = useState('')
+  const [donorPan, setDonorPan] = useState('')
+  const [donorAddress, setDonorAddress] = useState('')
+  const [cashAmount, setCashAmount] = useState('')
+  const [selectedCauseId, setSelectedCauseId] = useState('')
+  const [notes, setNotes] = useState('')
+
   const [dashboard, setDashboard] = useState<any>({ recentDonations: [] })
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [collectorData, setCollectorData] = useState<any>(null)
   const [statusLoading, setStatusLoading] = useState(true)
 
+  const loadDashboardData = async () => {
+    try {
+      const [d, l, h] = await Promise.all([
+        getCollectorDashboard(),
+        getLeaderboard(),
+        getDonationHeads(),
+      ])
+      setDashboard(d?.data ?? {})
+      setLeaderboard(l?.leaderboard ?? [])
+      const rawHeads = h?.data || (Array.isArray(h) ? h : [])
+      setCauses(rawHeads)
+      if (rawHeads.length > 0 && !selectedCauseId) {
+        setSelectedCauseId(rawHeads[0].key || rawHeads[0]._id || rawHeads[0].id)
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   useEffect(() => {
     if (!isHydrated) return
-    if (user) void getCollectorStatus().then((status) => { setCollectorData(status.data); if (status.data?.role !== 'COLLECTOR_APPROVED') { router.replace('/collector-apply' as never); return null } return Promise.all([getCollectorDashboard(), getLeaderboard()]) }).then((result) => { if (!result) return; const [d, l] = result; setDashboard(d.data ?? {}); setLeaderboard(l.leaderboard ?? []) }).catch(() => Alert.alert('Collector portal unavailable', 'Please sign in and try again.')).finally(() => setStatusLoading(false))
+    if (user) {
+      void getCollectorStatus()
+        .then((status) => {
+          setCollectorData(status.data)
+          if (status.data?.role !== 'COLLECTOR_APPROVED') {
+            router.replace('/collector-apply' as never)
+            return null
+          }
+          return loadDashboardData()
+        })
+        .catch(() => Alert.alert('Collector portal unavailable', 'Please sign in and try again.'))
+        .finally(() => setStatusLoading(false))
+    }
   }, [isHydrated, user, router])
+
+  const handleShareReferral = async () => {
+    const code = dashboard.referralCode || collectorData?.referralCode
+    if (!code) {
+      Alert.alert('Referral Code', 'Referral code is not available.')
+      return
+    }
+    try {
+      await Share.share({
+        message: `Namaste! Support Shri Gurudev Ashram charitable initiatives. Please use my official Collector Referral Code: ${code} when making a donation through the app or website: https://donate.shrigurudevashram.org`,
+        title: 'Shri Gurudev Ashram Seva',
+      })
+    } catch {
+      // dismissed
+    }
+  }
+
+  const handleSubmitCashDonation = async () => {
+    if (!donorName.trim()) {
+      Alert.alert('Missing Field', 'Please enter donor full name.')
+      return
+    }
+    if (!donorMobile.trim() || donorMobile.replace(/\D/g, '').length !== 10) {
+      Alert.alert('Invalid Mobile', 'Please enter a valid 10-digit mobile number.')
+      return
+    }
+    const cleanPan = donorPan.trim().toUpperCase()
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(cleanPan)) {
+      Alert.alert('Invalid PAN', 'Please enter a valid 10-character PAN number (e.g. ABCDE1234F).')
+      return
+    }
+    const numAmount = Number(cashAmount)
+    if (!Number.isFinite(numAmount) || numAmount < 10) {
+      Alert.alert('Invalid Amount', 'Please enter a valid donation amount (minimum ₹10).')
+      return
+    }
+
+    setIsSubmittingCash(true)
+    try {
+      const chosenHead = causes.find((c) => (c.key || c._id || c.id) === selectedCauseId)
+      const res = await collectCashDonation({
+        donor: {
+          name: donorName.trim(),
+          mobile: donorMobile.replace(/\D/g, ''),
+          idNumber: cleanPan,
+          address: donorAddress.trim() || undefined,
+        },
+        donationHead: {
+          id: chosenHead ? String(chosenHead._id || chosenHead.id) : undefined,
+          key: chosenHead?.key || 'general',
+          name: chosenHead?.name?.en || chosenHead?.name?.hi || chosenHead?.name || 'General Seva',
+        },
+        amount: numAmount,
+        notes: notes.trim() || undefined,
+      })
+
+      setShowCashModal(false)
+      setDonorName('')
+      setDonorMobile('')
+      setDonorPan('')
+      setDonorAddress('')
+      setCashAmount('')
+      setNotes('')
+
+      await loadDashboardData()
+
+      Alert.alert(
+        'Donation Recorded Successfully',
+        `Receipt #${res.receiptNumber} generated for ${donorName.trim()}. Would you like to view/share the receipt now?`,
+        [
+          {
+            text: 'Share Receipt',
+            onPress: () =>
+              downloadDonationReceipt({
+                donationId: res.donationId,
+                receiptNumber: res.receiptNumber,
+                receiptToken: res.receiptToken,
+              }),
+          },
+          { text: 'Done', style: 'cancel' },
+        ]
+      )
+    } catch (error) {
+      Alert.alert('Error', getFriendlyApiError(error, 'Failed to record cash donation. Please try again.'))
+    } finally {
+      setIsSubmittingCash(false)
+    }
+  }
 
   // Do not render content while auth is hydrating or role is invalid
   if (!isHydrated || !user || statusLoading) {
@@ -45,16 +199,18 @@ export default function CollectorDashboardRoute() {
               <View style={styles.headerRow}>
                 <View style={styles.headerCopy}>
                   <Text style={styles.kicker}>Namaste, Collector</Text>
-                  <Text style={styles.title}>Premium spiritual operations</Text>
-                  <Text style={styles.subtitle}>Manage paid bookings, pending payments, and journey follow-ups with calm precision.</Text>
+                  <Text style={styles.title}>Spiritual Field Operations</Text>
+                  <Text style={styles.subtitle}>Accept field donations, manage donor relationships, and monitor your impact.</Text>
                 </View>
-                <Pressable style={styles.analyticsButton}>
-                  <MaterialIcons name="timeline" size={20} color="#8B5A00" />
-                </Pressable>
               </View>
 
               <View style={styles.quickStatsGrid}>
-                {[{ label: 'Collected amount', value: `₹${dashboard.totalAmount ?? 0}`, icon: 'payments' }, { label: 'Successful donations', value: String(dashboard.donationCount ?? 0), icon: 'volunteer-activism' }, { label: 'Referral code', value: dashboard.referralCode ?? '—', icon: 'qr-code' }, { label: 'Leaderboard rank', value: String(leaderboard[0]?.rank ?? '—'), icon: 'leaderboard' }].map((stat) => (
+                {[
+                  { label: 'Collected amount', value: `₹${dashboard.totalAmount ?? 0}`, icon: 'payments' },
+                  { label: 'Successful donations', value: String(dashboard.donationCount ?? 0), icon: 'volunteer-activism' },
+                  { label: 'Referral code', value: dashboard.referralCode ?? collectorData?.referralCode ?? '—', icon: 'qr-code' },
+                  { label: 'Leaderboard rank', value: String(leaderboard[0]?.rank ?? '—'), icon: 'leaderboard' },
+                ].map((stat) => (
                   <View key={stat.label} style={styles.statCard}>
                     <LinearGradient colors={['#7A4B00', '#B97712']} style={styles.statIcon}>
                       <MaterialIcons name={stat.icon as any} size={18} color="#fff" />
@@ -81,6 +237,28 @@ export default function CollectorDashboardRoute() {
               </View>
             </BlurView>
 
+            {/* In-Person Cash Collection Banner */}
+            <Pressable
+              style={styles.cashCollectBanner}
+              onPress={() => setShowCashModal(true)}
+            >
+              <LinearGradient
+                colors={['#7B4B00', '#B97512', '#E0A31F']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.cashCollectGradient}
+              >
+                <View style={styles.cashCollectIconWrap}>
+                  <MaterialIcons name="add-circle-outline" size={26} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cashCollectTitle}>Record In-Person Donation</Text>
+                  <Text style={styles.cashCollectSub}>Accept cash donations in the field & issue instant 80G receipts</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={24} color="#fff" />
+              </LinearGradient>
+            </Pressable>
+
             {/* My Digital ID Section */}
             {user ? (
               <View style={styles.idSection}>
@@ -103,18 +281,24 @@ export default function CollectorDashboardRoute() {
 
                   <Pressable
                     style={styles.idActionBtn}
-                    onPress={() => Alert.alert('Share', 'Share feature coming soon.')}
+                    onPress={handleShareReferral}
                   >
                     <MaterialIcons name="share" size={20} color="#8B5A00" />
-                    <Text style={styles.idActionText}>Share</Text>
+                    <Text style={styles.idActionText}>Share Code</Text>
                   </Pressable>
 
                   <Pressable
                     style={styles.idActionBtn}
-                    onPress={() => Alert.alert('Download', 'Download feature coming soon.')}
+                    onPress={() => {
+                      const code = dashboard.referralCode || collectorData?.referralCode
+                      Alert.alert(
+                        'Collector Code',
+                        `Your official referral code is:\n\n${code || 'N/A'}\n\nAsk donors to enter this code during donation.`
+                      )
+                    }}
                   >
-                    <MaterialIcons name="download" size={20} color="#8B5A00" />
-                    <Text style={styles.idActionText}>Download</Text>
+                    <MaterialIcons name="qr-code" size={20} color="#8B5A00" />
+                    <Text style={styles.idActionText}>My Code</Text>
                   </Pressable>
                 </View>
               </View>
@@ -149,8 +333,124 @@ export default function CollectorDashboardRoute() {
               </Pressable>
             </Modal>
 
+            {/* Cash Donation Modal */}
+            <Modal
+              visible={showCashModal}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setShowCashModal(false)}
+            >
+              <KeyboardAvoidingView
+                style={styles.modalBackdrop}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              >
+                <Pressable style={styles.modalBackdrop} onPress={() => setShowCashModal(false)}>
+                  <Pressable
+                    style={[styles.modalSheet, { maxHeight: '90%' }]}
+                    onPress={(e) => e.stopPropagation()}
+                  >
+                    <View style={styles.modalHandle} />
+                    <Text style={styles.modalTitle}>Record In-Person Donation</Text>
+                    
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+                      <AppInput
+                        label="Donor Full Name *"
+                        placeholder="e.g. Ramesh Sharma"
+                        value={donorName}
+                        onChangeText={setDonorName}
+                      />
+
+                      <AppInput
+                        label="Mobile Number (10 Digits) *"
+                        placeholder="e.g. 9876543210"
+                        keyboardType="phone-pad"
+                        maxLength={10}
+                        value={donorMobile}
+                        onChangeText={(t) => setDonorMobile(t.replace(/\D/g, ''))}
+                      />
+
+                      <AppInput
+                        label="PAN Card Number *"
+                        placeholder="e.g. ABCDE1234F"
+                        autoCapitalize="characters"
+                        maxLength={10}
+                        value={donorPan}
+                        onChangeText={(t) => setDonorPan(t.toUpperCase())}
+                      />
+
+                      <AppInput
+                        label="Donation Amount (₹) *"
+                        placeholder="e.g. 1000"
+                        keyboardType="numeric"
+                        value={cashAmount}
+                        onChangeText={(t) => setCashAmount(t.replace(/\D/g, ''))}
+                      />
+
+                      <View>
+                        <Text style={styles.formLabel}>Select Seva / Cause</Text>
+                        <View style={styles.causePillsRow}>
+                          {causes.map((c) => {
+                            const cId = c.key || c._id || c.id
+                            const isSelected = selectedCauseId === cId
+                            const label = c.name?.en || c.name?.hi || c.name || 'General'
+                            return (
+                              <Pressable
+                                key={cId}
+                                style={[styles.causePill, isSelected && styles.causePillActive]}
+                                onPress={() => setSelectedCauseId(cId)}
+                              >
+                                <Text
+                                  style={[styles.causePillText, isSelected && styles.causePillTextActive]}
+                                  numberOfLines={1}
+                                >
+                                  {label}
+                                </Text>
+                              </Pressable>
+                            )
+                          })}
+                        </View>
+                      </View>
+
+                      <AppInput
+                        label="Donor Address (Optional)"
+                        placeholder="City, State, Pincode"
+                        value={donorAddress}
+                        onChangeText={setDonorAddress}
+                      />
+
+                      <AppInput
+                        label="Notes (Optional)"
+                        placeholder="Any special remarks"
+                        value={notes}
+                        onChangeText={setNotes}
+                      />
+
+                      <Pressable
+                        style={[styles.submitButton, isSubmittingCash && { opacity: 0.7 }]}
+                        onPress={handleSubmitCashDonation}
+                        disabled={isSubmittingCash}
+                      >
+                        <LinearGradient
+                          colors={['#7B4B00', '#B97512', '#E0A31F']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.modalCloseGradient}
+                        >
+                          {isSubmittingCash ? (
+                            <ActivityIndicator color="#fff" />
+                          ) : (
+                            <Text style={styles.modalCloseText}>Record Cash & Issue Receipt</Text>
+                          )}
+                        </LinearGradient>
+                      </Pressable>
+                    </ScrollView>
+                  </Pressable>
+                </Pressable>
+              </KeyboardAvoidingView>
+            </Modal>
+
             <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionTitle}>Operations queue</Text>
+              <Text style={styles.sectionTitle}>Recent Contributions</Text>
             </View>
           </View>
         }
@@ -249,4 +549,18 @@ const styles = StyleSheet.create({
   modalClose: { marginTop: 4 },
   modalCloseGradient: { minHeight: 54, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   modalCloseText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+
+  // Cash Collection Banner & Modal
+  cashCollectBanner: { marginTop: 14, borderRadius: 24, overflow: 'hidden' },
+  cashCollectGradient: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
+  cashCollectIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
+  cashCollectTitle: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  cashCollectSub: { color: 'rgba(255,255,255,0.88)', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  formLabel: { fontSize: 13, fontWeight: '700', color: '#2C1D10', marginBottom: 4 },
+  causePillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  causePill: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: '#F0E7DD' },
+  causePillActive: { backgroundColor: '#8B5A00', borderColor: '#8B5A00' },
+  causePillText: { fontSize: 12, fontWeight: '700', color: '#6B5A4A' },
+  causePillTextActive: { color: '#fff' },
+  submitButton: { marginTop: 12 },
 })

@@ -23,7 +23,7 @@ export function isValidAadhaarNumber(value: string) {
 }
 
 export function normalizeDigits(value: string, maxLength: number) {
-  let cleaned = value.replace(/[^\d]/g, "");
+  const cleaned = value.replace(/[^\d]/g, "");
   if (maxLength === 10) {
     return normalizePhoneNumber(cleaned);
   }

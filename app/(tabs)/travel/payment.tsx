@@ -170,6 +170,8 @@ export default function PaymentRoute() {
             const total = booking?.totalAmount ?? 0
             const sevaAmount = booking?.additionalSevaAmount ?? 0
             const yatraAmount = total - sevaAmount
+            const convenienceFee = Math.round(total * 0.02)
+            const grandTotal = total + convenienceFee
 
             return (
               <View style={styles.breakdown}>
@@ -197,8 +199,14 @@ export default function PaymentRoute() {
 
                 <View style={styles.breakdownDivider} />
                 <View style={styles.breakdownRow}>
-                  <Text style={styles.breakdownTotalLabel}>Total Amount</Text>
-                  <Text style={styles.breakdownTotalValue}>₹{total.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.breakdownLabel}>Gateway & Convenience (2%)</Text>
+                  <Text style={styles.breakdownValue}>+₹{convenienceFee.toLocaleString('en-IN')}</Text>
+                </View>
+
+                <View style={styles.breakdownDivider} />
+                <View style={styles.breakdownRow}>
+                  <Text style={styles.breakdownTotalLabel}>Total Payable</Text>
+                  <Text style={styles.breakdownTotalValue}>₹{grandTotal.toLocaleString('en-IN')}</Text>
                 </View>
               </View>
             )
@@ -229,7 +237,7 @@ export default function PaymentRoute() {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.primaryButtonText}>
-                {booking ? `Proceed to Pay ₹${booking.totalAmount.toLocaleString('en-IN')}` : 'Proceed to Pay'}
+                {booking ? `Proceed to Pay ₹${(booking.totalAmount + Math.round(booking.totalAmount * 0.02)).toLocaleString('en-IN')}` : 'Proceed to Pay'}
               </Text>
             )}
           </LinearGradient>

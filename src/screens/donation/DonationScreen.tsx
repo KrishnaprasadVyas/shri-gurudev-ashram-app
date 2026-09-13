@@ -30,6 +30,7 @@ import { Image } from 'expo-image'
 import { createDonation, createDonationOrder, verifyDonationPayment, getDonationHeads, getRecentDonations, getTopDonors } from '../../services/donation'
 import { useAuthStore } from '../../store/useAuthStore'
 import { useTabBarBottomPadding } from '../../hooks/useTabBarBottomPadding'
+import { getFriendlyApiError } from '../../utils/apiErrors'
 
 /* ─── Design tokens ─── */
 const C = {
@@ -289,7 +290,7 @@ export default function DonationScreen() {
         theme: { color: '#E65C00' },
       })
 
-      await verifyDonationPayment({
+      const verifyRes = await verifyDonationPayment({
         donationId: donationRes.donationId,
         razorpayOrderId: checkoutResult.razorpay_order_id,
         razorpayPaymentId: checkoutResult.razorpay_payment_id,
@@ -301,13 +302,15 @@ export default function DonationScreen() {
         params: { 
           donationId: donationRes.donationId,
           amount: effectiveAmount.toString(),
-          cause: selectedCategoryName
+          cause: selectedCategoryName,
+          receiptNumber: verifyRes?.receiptNumber,
+          receiptToken: donationRes?.receiptToken,
         }
       } as never)
 
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to complete donation. Please try again.'
-      Alert.alert('Payment Error', errorMessage)
+      const errorMessage = getFriendlyApiError(error, 'Failed to complete donation. Please try again.')
+      Alert.alert('Payment Status', errorMessage)
     } finally {
       setIsPaying(false)
     }

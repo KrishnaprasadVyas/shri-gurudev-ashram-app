@@ -4,6 +4,8 @@ google-services.json
 /backend/uploads
 .env
 .env.*
+!.env.example
+!backend/.env.example
 .temp
 firebase-service-account.json
 # dependencies

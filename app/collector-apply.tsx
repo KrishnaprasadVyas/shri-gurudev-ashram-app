@@ -8,6 +8,7 @@ import { useAuthStore } from '../src/store/useAuthStore'
 import AppInput from '../src/components/AppInput'
 import ImageUploadWidget from '../src/components/ImageUploadWidget'
 import { useProtectedRoute } from '../src/hooks/useProtectedRoute'
+import { getFriendlyApiError } from '../src/utils/apiErrors'
 
 type CollectorStatus = { role: string; collectorId?: string; referralCode?: string; collectorProfile?: { fullName?: string; status?: string; rejectedReason?: string } | null }
 
@@ -84,7 +85,7 @@ export default function CollectorApplyRoute() {
       await loadStatus()
       Alert.alert('Application submitted', 'Your collector application is now pending approval.')
     } catch (error) { 
-      Alert.alert('Application failed', error instanceof Error ? error.message : 'Please try again.') 
+      Alert.alert('Application Status', getFriendlyApiError(error, 'Unable to submit your application at this time. Please try again.')) 
     } finally { 
       setSubmitting(false) 
     }

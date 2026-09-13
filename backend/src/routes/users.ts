@@ -220,7 +220,8 @@ usersRouter.get(
       if (!rawPath) throw new HttpError(400, "Document path parameter is required");
 
       const baseDir = path.resolve(process.cwd(), "uploads", "verifications");
-      const targetPath = path.resolve(process.cwd(), rawPath);
+      const normalizedPath = rawPath.replace(/^[/\\]+/, "");
+      const targetPath = path.resolve(process.cwd(), normalizedPath);
 
       // Prevent path traversal
       if (!targetPath.startsWith(baseDir)) {

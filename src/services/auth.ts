@@ -130,8 +130,16 @@ async function request(path: string, init: RequestInit = {}) {
       headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error ?? "Request failed");
+    if (!response.ok) throw new Error(body.error ?? body.message ?? "Request could not be processed. Please try again.");
     return body;
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new Error("Connection timed out. Please verify your internet connection and try again.");
+    }
+    if (error?.message?.toLowerCase().includes('network request failed')) {
+      throw new Error("Unable to reach the Ashram servers. Please check your internet connection.");
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }

@@ -79,6 +79,28 @@ razorpayWebhookRouter.post('/', async (request, response, next) => {
         response.json({ received: true, donation: true })
         return
       }
+
+      // Check Yajman Seva bookings in Supabase
+      const { data: sevaBooking } = await supabaseAdmin
+        .from('seva_bookings')
+        .select('id, status, user_id')
+        .eq('razorpay_order_id', donationOrderId)
+        .maybeSingle()
+
+      if (sevaBooking) {
+        const payment = payload.payload.payment.entity
+        if (payload.event === 'payment.captured' && sevaBooking.status !== 'paid') {
+          await supabaseAdmin
+            .from('seva_bookings')
+            .update({
+              status: 'paid',
+              razorpay_payment_id: payment.id,
+            })
+            .eq('id', sevaBooking.id)
+        }
+        response.json({ received: true, sevaBooking: true })
+        return
+      }
     }
 
     if (payload.event === 'payment.captured') {
@@ -115,8 +137,13 @@ async function reconcileCapturedPayment(payment: any) {
     .eq('razorpay_order_id', payment.order_id)
     .maybeSingle()
 
-  if (paymentError || !existingPayment) {
-    throw new HttpError(404, paymentError?.message ?? 'Payment record not found for Razorpay order')
+  if (paymentError) {
+    throw new HttpError(500, paymentError.message)
+  }
+
+  if (!existingPayment) {
+    console.warn(`[Razorpay Webhook] Payment record not found for order ${payment.order_id}`)
+    return
   }
 
   if (existingPayment.status === 'captured') {
@@ -137,7 +164,7 @@ async function reconcileCapturedPayment(payment: any) {
     p_booking_id: booking.id,
     p_razorpay_order_id: payment.order_id,
     p_razorpay_payment_id: payment.id,
-    p_razorpay_signature: existingPayment.razorpay_signature,
+    p_razorpay_signature: existingPayment.razorpay_signature ?? null,
     p_payment_method: payment.method ?? existingPayment.payment_method,
     p_gateway_fee: payment.fee ? Number(payment.fee) / 100 : existingPayment.gateway_fee,
   } as never)
