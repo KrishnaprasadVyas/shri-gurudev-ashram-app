@@ -80,7 +80,7 @@
     "lint": "eslint .",
     "test": "jest --passWithNoTests",
     "test:coverage": "jest --coverage --passWithNoTests",
-    "export:android": "npx expo export --platform android --no-bytecode",
+    "export:android": "npx expo export --platform android",
     "test:android:runtime": "powershell -ExecutionPolicy Bypass -File .agents/skills/android-testing/scripts/run-runtime-tests.ps1",
     "validate": "powershell -ExecutionPolicy Bypass -File .agents/skills/autonomous-dev/scripts/validate-all.ps1",
     "doctor": "npx expo-doctor",
