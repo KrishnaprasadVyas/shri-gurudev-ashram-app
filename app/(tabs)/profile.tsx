@@ -209,9 +209,9 @@ export default function ProfileRoute() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Help & Support</Text>
             <View style={styles.settingsCard}>
-              <SettingsRow icon="call-outline" label="Call Support" onPress={() => void openSupportLink(`tel:${SUPPORT_CONFIG.phone}`)} />
-              <SettingsRow icon="logo-whatsapp" label="WhatsApp Support" onPress={() => void openSupportLink(`https://wa.me/${SUPPORT_CONFIG.whatsapp.replace(/[^\d]/g, '')}`)} />
-              <SettingsRow icon="mail-outline" label="Email Support" onPress={() => void openSupportLink(`mailto:${SUPPORT_CONFIG.email}`)} />
+              <SettingsRow icon="call-outline" label="Call Support" subtitle={SUPPORT_CONFIG.phone} onPress={() => void openSupportLink('call')} />
+              <SettingsRow icon="logo-whatsapp" label="WhatsApp Support" subtitle={SUPPORT_CONFIG.whatsapp} onPress={() => void openSupportLink('whatsapp')} />
+              <SettingsRow icon="mail-outline" label="Email Support" subtitle={SUPPORT_CONFIG.email} onPress={() => void openSupportLink('email')} />
             </View>
           </View>
         </ScrollView>
@@ -301,9 +301,9 @@ export default function ProfileRoute() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Help & Support</Text>
           <View style={styles.settingsCard}>
-            <SettingsRow icon="call-outline" label="Call Support" onPress={() => void openSupportLink('call')} />
-            <SettingsRow icon="logo-whatsapp" label="WhatsApp Support" onPress={() => void openSupportLink('whatsapp')} />
-            <SettingsRow icon="mail-outline" label="Email Support" onPress={() => void openSupportLink('email')} />
+            <SettingsRow icon="call-outline" label="Call Support" subtitle={SUPPORT_CONFIG.phone} onPress={() => void openSupportLink('call')} />
+            <SettingsRow icon="logo-whatsapp" label="WhatsApp Support" subtitle={SUPPORT_CONFIG.whatsapp} onPress={() => void openSupportLink('whatsapp')} />
+            <SettingsRow icon="mail-outline" label="Email Support" subtitle={SUPPORT_CONFIG.email} onPress={() => void openSupportLink('email')} />
           </View>
         </View>
 
@@ -419,11 +419,13 @@ function StatCard({ icon, label, value }: { icon: MaterialIconName; label: strin
 function SettingsRow({
   icon,
   label,
+  subtitle,
   destructive = false,
   onPress,
 }: {
   icon: IonIconName
   label: string
+  subtitle?: string
   destructive?: boolean
   onPress: () => void
 }) {
@@ -431,7 +433,10 @@ function SettingsRow({
     <Pressable onPress={onPress} style={styles.settingsRow}>
       <View style={styles.settingsRowLeft}>
         <Ionicons name={icon} size={22} color={destructive ? '#B3261E' : '#7E7162'} />
-        <Text style={[styles.settingsRowLabel, destructive && styles.destructiveText]}>{label}</Text>
+        <View style={styles.settingsRowTextWrap}>
+          <Text style={[styles.settingsRowLabel, destructive && styles.destructiveText]}>{label}</Text>
+          {subtitle ? <Text style={styles.settingsRowSubtitle}>{subtitle}</Text> : null}
+        </View>
       </View>
       <Ionicons name="chevron-forward" size={18} color="#D7C7B8" />
     </Pressable>
@@ -533,8 +538,10 @@ const styles = StyleSheet.create({
   collectorText: { color: 'rgba(255,255,255,0.82)', fontSize: 13, marginTop: 4 },
   settingsCard: { backgroundColor: '#fff', borderRadius: 24, paddingHorizontal: 16, borderWidth: 1, borderColor: '#F0E7DD' },
   settingsRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#F5EDE4' },
-  settingsRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  settingsRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, paddingVertical: 10 },
+  settingsRowTextWrap: { flex: 1, gap: 2 },
   settingsRowLabel: { color: '#2B231B', fontSize: 15, fontWeight: '800' },
+  settingsRowSubtitle: { color: '#8B5A00', fontSize: 12.5, fontWeight: '600' },
   destructiveText: { color: '#B3261E' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(43,35,27,0.44)', alignItems: 'center', justifyContent: 'center', padding: 20 },
   modalCard: { width: '100%', borderRadius: 26, backgroundColor: '#fff', padding: 20, gap: 14 },

@@ -33,7 +33,7 @@ function toIso(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-const DURATION_OPTIONS = [
+const DURATION_OPTIONS: { label: string; value: number | 'custom' }[] = [
   { label: '1 Year', value: 1 },
   { label: '2 Years', value: 2 },
   { label: '3 Years', value: 3 },
